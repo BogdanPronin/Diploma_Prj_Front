@@ -15,7 +15,7 @@ export default function SideNav({ onSelectCategory }) {
     <nav className="w-3/12 h-full bg-dark-600 flex flex-col items-center">
       <div className="flex items-center my-14">
         <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
-        <span className="font-semibold text-light-100 ml-4">Messenger-Mail</span>
+        <span className="font-semibold text-light-100 ml-4 text-2xl">Messenger-Mail</span>
       </div>
       <ul>
       {navItems.map((navItem, index) => (

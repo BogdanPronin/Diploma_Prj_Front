@@ -21,7 +21,7 @@ export default function EmailList({ onSelectEmail, category, onCompose, drafts, 
   }, [category, drafts]);
 
   return (
-    <div className="flex flex-col bg-dark-500 w-[40%] min-w-[350px] h-full">
+    <div className="flex flex-col bg-dark-500  min-w-[350px] h-full">
       <div className="flex items-center py-6 px-6">
         <span className="font-light text-xl text-light-200">{category}</span>
         <FontAwesomeIcon

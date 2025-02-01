@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ContentHeader from "./ContentHeader";
 import EmailDetails from "./EmailDetails";
 import EmailList from "./EmailList";
 import ComposeEmail from "./ComposeEmail";
 import SideNav from "./SideNav";
+import { fetchEmails, deleteEmail } from "../api"; // Подключаем API-функции
 
 export default function Main() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
   const [category, setCategory] = useState("Inbox");
+  const [emails, setEmails] = useState([]); // Список писем
   const [drafts, setDrafts] = useState([]); // Список черновиков
   const [currentDraft, setCurrentDraft] = useState(null); // Текущий черновик
+
+  // Загружаем письма при смене категории
+  useEffect(() => {
+    console.log(`📩 Запрос писем для категории: ${category}`);
+    fetchEmails(category).then((data) => {
+      console.log(`✅ Письма загружены: `, data);
+      setEmails(data);
+    });
+  }, [category]);
 
   // Проверка, является ли черновик непустым
   const isDraftNotEmpty = (draft) => {
@@ -20,7 +31,6 @@ export default function Main() {
   // Функция начала нового письма
   const handleCompose = () => {
     if (isDraftNotEmpty(currentDraft)) {
-      // Обновляем черновик, если он уже есть в списке
       setDrafts((prevDrafts) =>
         prevDrafts.some((d) => d.id === currentDraft.id)
           ? prevDrafts.map((d) => (d.id === currentDraft.id ? currentDraft : d))
@@ -30,6 +40,26 @@ export default function Main() {
     setSelectedEmail(null);
     setIsComposing(true);
     setCurrentDraft({ id: Date.now(), to: "", subject: "", body: "" });
+  };
+
+  // Функция удаления письма (Перемещение в "Trash")
+  const handleDeleteEmail = (emailId) => {
+    console.log(`🗑 Удаление письма ID: ${emailId}...`);
+
+    deleteEmail(emailId)
+      .then(() => {
+        console.log(`✅ Письмо ID ${emailId} перемещено в "Trash".`);
+
+        // 🔥 Фильтруем удалённое письмо и обновляем стейт
+        setEmails((prevEmails) => {
+          const updatedEmails = prevEmails.filter((email) => email.id !== emailId);
+          console.log("📩 Обновленный список писем:", updatedEmails);
+          return updatedEmails;
+        });
+
+        setSelectedEmail(null);
+      })
+      .catch((error) => console.error("❌ Ошибка при удалении письма:", error));
   };
 
   // Функция выбора письма (если черновик — открываем редактор)
@@ -44,10 +74,9 @@ export default function Main() {
     }
 
     if (category === "Drafts") {
-      // Открываем редактор для существующего черновика
       setIsComposing(true);
       setCurrentDraft(email);
-      setSelectedEmail(email); // Теперь черновик будет выделяться
+      setSelectedEmail(email);
     } else {
       setIsComposing(false);
       setSelectedEmail(email);
@@ -66,7 +95,8 @@ export default function Main() {
               category={category} 
               onCompose={handleCompose} 
               drafts={drafts} 
-              selectedEmail={selectedEmail} 
+              selectedEmail={selectedEmail}
+              emails={emails} // Передаем список писем
             />
           </div>
           <div className="flex-grow h-full">
@@ -77,7 +107,11 @@ export default function Main() {
                 setDraft={setCurrentDraft} 
               />
             ) : selectedEmail ? (
-              <EmailDetails email={selectedEmail} />
+              <EmailDetails 
+                email={selectedEmail} 
+                setSelectedEmail={setSelectedEmail} 
+                onEmailDeleted={handleDeleteEmail} // Передаем функцию удаления
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-light-200">
                 Выберите письмо

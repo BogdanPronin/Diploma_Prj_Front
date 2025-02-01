@@ -1,10 +1,13 @@
-import "./App.css";
+import { useState } from "react";
+import AuthPage from "./components/AuthPage";
 import MainLayout from "./components/MainLayout";
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
   return (
-    <div className="h-screen w-screen flex justify-center items-center">
-      <MainLayout />
+    <div className="App">
+      {isAuthenticated ? <MainLayout /> : <AuthPage onLogin={() => setIsAuthenticated(true)} />}
     </div>
   );
 }

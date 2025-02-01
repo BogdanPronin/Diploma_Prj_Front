@@ -5,6 +5,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt } from "@fortawesome/free-solid-svg-icons";
+import { deleteEmail } from "../api"; // Функция удаления писем
 
 // Функция для форматирования размера файла
 const formatFileSize = (size) => {
@@ -25,8 +26,9 @@ const getFileIcon = (type) => {
   return faFileAlt;
 };
 
-export default function EmailDetails({ email }) {
+export default function EmailDetails({ email, onEmailDeleted }) {
   if (!email) {
+    console.log("EmailDetails: Нет выбранного письма");
     return (
       <div className="flex h-full items-center justify-center text-light-200">
         Выберите письмо
@@ -34,23 +36,39 @@ export default function EmailDetails({ email }) {
     );
   }
 
+  const handleDelete = () => {
+    console.log(`🗑 Удаление письма ID: ${email.id}...`);
+  
+    deleteEmail(email.id)
+      .then(() => {
+        console.log(`✅ Письмо ID ${email.id} успешно перемещено в корзину`);
+  
+        // ❗ Убираем письмо из списка
+        if (onEmailDeleted) {
+          console.log("🔄 Вызываем onEmailDeleted() для обновления списка");
+          onEmailDeleted(email.id);
+        }
+      })
+      .catch((error) => console.error("❌ Ошибка при удалении письма:", error));
+  };
+  
   return (
-    <div className="flex flex-col bg-dark-500 w-2/3">
+    <div className="flex flex-col bg-dark-500">
       <span className="text-2xs text-center text-light-600 my-6">13 / 13</span>
       <div className="flex items-center px-10">
         <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
         <span className="text-sm text-light-200 font-medium">{email.from}</span>
         <div className="flex ml-auto">
-          <FontAwesomeIcon icon={faReply} className="mx-2 text-light-200" />
-          <FontAwesomeIcon icon={faTrashCan} className="mx-2 text-light-200" />
-          <FontAwesomeIcon icon={faEllipsisH} className="mx-2 text-light-200" />
+          <FontAwesomeIcon icon={faReply} className="mx-2 text-light-200 cursor-pointer" />
+          <FontAwesomeIcon icon={faTrashCan} className="mx-2 text-light-200 cursor-pointer" onClick={handleDelete} />
+          <FontAwesomeIcon icon={faEllipsisH} className="mx-2 text-light-200 cursor-pointer" />
         </div>
       </div>
       <span className="px-10 text-2xs text-light-600 font-bold mt-6">{email.time}</span>
       <span className="px-10 text-lg text-light-100 font-light mb-6">{email.subject}</span>
 
       {/* Контент письма */}
-      <div className="px-10 text-xs text-light-500 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: email.body }}></div>
+      <div className="px-10 text-xs text-light-500 whitespace-pre-wrap mb-6" dangerouslySetInnerHTML={{ __html: email.body }}></div>
 
       {/* Блок вложений */}
       {email.attachments && email.attachments.length > 0 && (
