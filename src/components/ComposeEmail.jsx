@@ -25,7 +25,7 @@ const getFileIcon = (type) => {
 
 export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
   const [email, setEmail] = useState(
-    draft || { id: Date.now(), to: "", subject: "", body: "", attachments: [] }
+    draft || { uid: Date.now(), to: "", subject: "", body: "", attachments: [] }
   );
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
 
       {/* Форма загрузки файлов */}
       <div className="mt-4">
-        <input type="file" multiple onChange={handleFileUpload} className="hidden" id="file-upload" />
+        <input type="file" multiple onChange={handleFileUpload} className="hidden" uid="file-upload" />
         <label htmlFor="file-upload" className="cursor-pointer bg-blue-200 text-white px-4 py-2 rounded-md">
           Attach Files
         </label>

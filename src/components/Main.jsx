@@ -32,27 +32,27 @@ export default function Main() {
   const handleCompose = () => {
     if (isDraftNotEmpty(currentDraft)) {
       setDrafts((prevDrafts) =>
-        prevDrafts.some((d) => d.id === currentDraft.id)
-          ? prevDrafts.map((d) => (d.id === currentDraft.id ? currentDraft : d))
-          : [...prevDrafts, { ...currentDraft, id: Date.now() }]
+        prevDrafts.some((d) => d.uid === currentDraft.uid)
+          ? prevDrafts.map((d) => (d.uid === currentDraft.uid ? currentDraft : d))
+          : [...prevDrafts, { ...currentDraft, uid: Date.now() }]
       );
     }
     setSelectedEmail(null);
     setIsComposing(true);
-    setCurrentDraft({ id: Date.now(), to: "", subject: "", body: "" });
+    setCurrentDraft({ uid: Date.now(), to: "", subject: "", body: "" });
   };
 
   // Функция удаления письма (Перемещение в "Trash")
   const handleDeleteEmail = (emailId) => {
-    console.log(`🗑 Удаление письма ID: ${emailId}...`);
+    console.log(`🗑 Удаление письма uid: ${emailId}...`);
 
     deleteEmail(emailId)
       .then(() => {
-        console.log(`✅ Письмо ID ${emailId} перемещено в "Trash".`);
+        console.log(`✅ Письмо uid ${emailId} перемещено в "Trash".`);
 
         // 🔥 Фильтруем удалённое письмо и обновляем стейт
         setEmails((prevEmails) => {
-          const updatedEmails = prevEmails.filter((email) => email.id !== emailId);
+          const updatedEmails = prevEmails.filter((email) => email.uid !== emailId);
           console.log("📩 Обновленный список писем:", updatedEmails);
           return updatedEmails;
         });
@@ -66,9 +66,9 @@ export default function Main() {
   const handleSelectEmail = (email) => {
     if (isComposing && isDraftNotEmpty(currentDraft)) {
       setDrafts((prevDrafts) =>
-        prevDrafts.some((d) => d.id === currentDraft.id)
-          ? prevDrafts.map((d) => (d.id === currentDraft.id ? currentDraft : d))
-          : [...prevDrafts, { ...currentDraft, id: Date.now() }]
+        prevDrafts.some((d) => d.uid === currentDraft.uid)
+          ? prevDrafts.map((d) => (d.uid === currentDraft.uid ? currentDraft : d))
+          : [...prevDrafts, { ...currentDraft, uid: Date.now() }]
       );
       setCurrentDraft(null);
     }

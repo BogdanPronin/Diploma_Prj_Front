@@ -1,18 +1,22 @@
 import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./EmailCard.css";
+import { formatEmailDate, parseSender } from "./utils";
 
 export default function EmailCard(props) {
-  const { image, from, time, subject, body, hasAttachment, isSelected, onClick, to } = props;
+  const { image, from, date, subject, body, hasAttachment, isSelected, onClick, to } = props;
 
-  // Определяем источник (отправителя или получателя)
-  const displayName = from || to || "<None>";
+  // Форматируем дату перед отображением
+  const formattedDate = date ? formatEmailDate(date) : "-";
 
-  // Получаем первую букву
-  const firstLetter = displayName.charAt(0).toUpperCase();
+  // Парсим отправителя
+  const { name, email } = parseSender(from.text || "");
+
+  // Получаем первую букву имени отправителя
+  const firstLetter = name.charAt(0).toUpperCase();
 
   // Получаем первую букву второго слова (если есть)
-  const words = displayName.split(" ");
+  const words = name.split(" ");
   const secondLetter = words.length > 1 ? words[1].charAt(0).toUpperCase() : "";
 
   return (
@@ -30,9 +34,9 @@ export default function EmailCard(props) {
 
       <div className="flex flex-col w-full ml-3">
         <div className="flex items-center">
-          <span className="text-xs font-medium mr-auto">{displayName}</span>
+          <span className="text-xs font-medium mr-auto">{name}</span>
           {hasAttachment && <FontAwesomeIcon icon={faPaperclip} className="mr-2" />}
-          <span className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl">{time || "-"}</span>
+          <span className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl">{formattedDate}</span>
         </div>
         <span className="text-sm font-medium mt-2">{subject || "<None Subject>"}</span>
         <span className="clamp text-xs font-normal mt-4 w-full">{body}</span>
