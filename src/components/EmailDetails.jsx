@@ -37,7 +37,7 @@ export default function EmailDetails({ email, onEmailDeleted }) {
   const { name, email: senderEmail } = parseSender(email.from.text || "");
 
   return (
-    <div className="flex flex-col bg-dark-500">
+    <div className="flex flex-col bg-dark-500 overflow-y-scroll">
       <span className="text-2xs text-center text-light-600 my-6">13 / 13</span>
       <div className="flex items-center px-10">
         <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>

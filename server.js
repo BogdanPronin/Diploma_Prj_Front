@@ -17,8 +17,12 @@ const mailConfig = {
 /**
  * Эндпоинт для отправки письма.
  */
-app.post('/send', async (req, res) => {
-  const { to, subject, text, html } = req.body;
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() }); // храним файлы в памяти
+
+app.post('/send', upload.array('attachments'), async (req, res) => {
+  const { to, subject, html } = req.body;
+  const attachments = req.files;
 
   const transporter = nodemailer.createTransport({
     host: 'smtp.mail.ru',
@@ -26,18 +30,25 @@ app.post('/send', async (req, res) => {
     secure: true,
     auth: {
       user: mailConfig.user,
-      pass: mailConfig.pass
-    }
+      pass: mailConfig.pass,
+    },
   });
+
+  // Формируем массив вложений для nodemailer
+  const formattedAttachments = attachments?.map(file => ({
+    filename: file.originalname,
+    content: file.buffer,
+  }));
 
   try {
     let info = await transporter.sendMail({
       from: mailConfig.user,
       to,
       subject,
-      text,
-      html
+      html,
+      attachments: formattedAttachments, // прикрепляем вложения
     });
+
     res.json({ message: 'Письмо успешно отправлено', info });
   } catch (error) {
     console.error('Ошибка при отправке письма:', error);
@@ -45,11 +56,16 @@ app.post('/send', async (req, res) => {
   }
 });
 
+
 /**
  * Эндпоинт для получения писем из папки "Входящие".
  * Помимо базовой информации, отправляем UID, чтобы фронт мог использовать его для обновления флагов.
  */
 app.get('/receive', (req, res) => {
+  const category = req.query.category || "INBOX";
+  const beforeUid = req.query.beforeUid; // 👈 Для подгрузки старых писем
+  const limit = Number(req.query.limit) || 10;
+
   const imap = new Imap({
     user: mailConfig.user,
     password: mailConfig.pass,
@@ -58,85 +74,94 @@ app.get('/receive', (req, res) => {
     tls: true
   });
 
-  function openInbox(callback) {
-    // Открываем в read-only режиме, так как здесь лишь получаем данные
-    imap.openBox('INBOX', true, callback);
+  function openCategory(callback) {
+    imap.openBox(category, true, callback);
   }
 
   imap.once('ready', () => {
-    openInbox((err, box) => {
+    openCategory((err, box) => {
       if (err) {
-        console.error('Ошибка при открытии INBOX:', err);
         res.status(500).json({ error: err.toString() });
         imap.end();
         return;
       }
 
-      // Сначала получаем количество непрочитанных писем
-      imap.search(['UNSEEN'], (err, unseenResults) => {
+      // Поиск непрочитанных писем
+      imap.search(['UNSEEN'], (err, unreadResults) => {
         if (err) {
-          console.error('Ошибка при поиске непрочитанных писем:', err);
           res.status(500).json({ error: err.toString() });
           imap.end();
           return;
         }
-        const unreadCount = unseenResults.length;
 
-        const messages = [];
-        // Берём последние 10 писем (если писем меньше – все)
-        const startSeq = box.messages.total > 10 ? box.messages.total - 9 : 1;
-        const seqRange = `${startSeq}:${box.messages.total}`;
+        const totalUnreadMessages = unreadResults.length;
 
-        const fetch = imap.seq.fetch(seqRange, {
-          bodies: '',
-          struct: true
-        });
+        // Поиск всех писем (или писем старше beforeUid)
+        const searchCriteria = beforeUid 
+          ? [['UID', `1:${beforeUid - 1}`]] // письма старше указанного UID
+          : ['ALL'];
 
-        fetch.on('message', (msg, seqno) => {
-          let buffer = '';
-          let attributes = {};
-          msg.on('body', (stream, info) => {
-            stream.on('data', (chunk) => {
-              buffer += chunk.toString('utf8');
+        imap.search(searchCriteria, (err, results) => {
+          if (err || !results.length) {
+            imap.end();
+            return res.json({ 
+              totalMessages: box.messages.total, 
+              totalUnreadMessages: totalUnreadMessages,
+              messages: [] 
+            });
+          }
+
+          const latestUids = results.slice(-limit).reverse();
+
+          const messages = [];
+          const fetch = imap.fetch(latestUids, { bodies: '', struct: true });
+
+          fetch.on('message', (msg) => {
+            let buffer = '';
+            let attributes = {};
+
+            msg.on('body', (stream) => {
+              stream.on('data', (chunk) => {
+                buffer += chunk.toString('utf8');
+              });
+            });
+
+            msg.once('attributes', (attrs) => {
+              attributes = attrs;
+            });
+
+            msg.once('end', () => {
+              simpleParser(buffer, (err, parsed) => {
+                if (!err) {
+                  messages.push({
+                    uid: attributes.uid,
+                    subject: parsed.subject,
+                    from: parsed.from,
+                    to: parsed.to,
+                    date: parsed.date,
+                    text: parsed.text,
+                    html: parsed.html,
+                    isRead: attributes.flags.includes('\\Seen')
+                  });
+                }
+
+                if (messages.length === latestUids.length) {
+                  messages.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                  imap.end();
+                  res.json({ 
+                    totalMessages: box.messages.total, 
+                    totalUnreadMessages: totalUnreadMessages,
+                    messages 
+                  });
+                }
+              });
             });
           });
-          msg.once('attributes', (attrs) => {
-            attributes = attrs;
-          });
-          msg.once('end', () => {
-            simpleParser(buffer, (err, parsed) => {
-              if (err) {
-                console.error(`Ошибка парсинга письма seqno=${seqno}:`, err);
-              } else {
-                // Флаг \Seen означает, что письмо прочитано
-                const isRead = attributes.flags && attributes.flags.includes('\\Seen');
-                messages.push({
-                  uid: attributes.uid,  // Передаём UID для идентификации письма на фронте
-                  subject: parsed.subject,
-                  from: parsed.from,
-                  to: parsed.to,
-                  date: parsed.date,
-                  text: parsed.text,
-                  html: parsed.html,
-                  isRead
-                });
-              }
-            });
-          });
-        });
 
-        fetch.once('error', (err) => {
-          console.error('Ошибка выборки писем:', err);
-          res.status(500).json({ error: err.toString() });
-          imap.end();
-        });
-
-        fetch.once('end', () => {
-          imap.end();
-          res.json({
-            totalMessages: box.messages.total,
-            unreadCount,
-            messages
+          fetch.once('error', (err) => {
+            res.status(500).json({ error: err.toString() });
+            imap.end();
           });
         });
       });
@@ -144,16 +169,14 @@ app.get('/receive', (req, res) => {
   });
 
   imap.once('error', (err) => {
-    console.error('Ошибка IMAP:', err);
     res.status(500).json({ error: err.toString() });
-  });
-
-  imap.once('end', () => {
-    console.log('IMAP соединение завершено');
   });
 
   imap.connect();
 });
+
+
+
 
 /**
  * Эндпоинт для установки флага "прочитано" для указанных писем.
@@ -211,6 +234,41 @@ app.post('/mark-read', (req, res) => {
 
   imap.connect();
 });
+
+app.get('/folders', (req, res) => {
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: 'imap.mail.ru',
+    port: 993,
+    tls: true
+  });
+
+  imap.once('ready', () => {
+    imap.getBoxes((err, boxes) => {
+      if (err) {
+        console.error('Ошибка при получении списка папок:', err);
+        res.status(500).json({ error: err.toString() });
+      } else {
+        console.log('📂 Доступные папки:', Object.keys(boxes));
+        res.json(Object.keys(boxes)); // Отправляем список папок на фронт
+      }
+      imap.end();
+    });
+  });
+
+  imap.once('error', (err) => {
+    console.error('Ошибка IMAP:', err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.once('end', () => {
+    console.log('IMAP соединение завершено');
+  });
+
+  imap.connect();
+});
+
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;

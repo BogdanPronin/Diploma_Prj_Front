@@ -1,10 +1,10 @@
-import { faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./EmailCard.css";
 import { formatEmailDate, parseSender } from "./utils";
 
 export default function EmailCard(props) {
-  const { image, from, date, subject, body, hasAttachment, isSelected, onClick, to } = props;
+  const { image, from, date, subject, body, hasAttachment, isSelected, onClick, isRead } = props;
 
   // Форматируем дату перед отображением
   const formattedDate = date ? formatEmailDate(date) : "-";
@@ -24,7 +24,7 @@ export default function EmailCard(props) {
       className={`flex flex-row py-4 px-6 cursor-pointer rounded-3xl drop-shadow-2xl transition-all duration-200
         ${isSelected ? "bg-gradient-to-br from-blue-200 to-blue-300 text-white" : "bg-dark-500 text-light-200"}
         hover:bg-gradient-to-br from-dark-200 to-dark-300`}
-      onClick={onClick} // Передаём событие клика
+      onClick={onClick}
     >
       {/* Квадрат с инициалами */}
       <div className={`${image} relative w-12 h-10 mt-3 rounded-xl bg-blue-200 flex items-center justify-center text-white font-bold`}>
@@ -36,10 +36,20 @@ export default function EmailCard(props) {
         <div className="flex items-center">
           <span className="text-xs font-medium mr-auto">{name}</span>
           {hasAttachment && <FontAwesomeIcon icon={faPaperclip} className="mr-2" />}
-          <span className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl">{formattedDate}</span>
+          <div className="flex items-center space-x-2">
+            {!isRead && (
+              <FontAwesomeIcon
+                icon={faCircle}
+                className="text-xs text-blue-400"
+              />
+            )}
+            <span className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl">
+              {formattedDate}
+            </span>
+          </div>
         </div>
-        <span className="text-sm font-medium mt-2">{subject || "<None Subject>"}</span>
-        <span className="clamp text-xs font-normal mt-4 w-full">{body}</span>
+        <span className="text-sm font-medium mt-2 ">{subject || "<None Subject>"}</span>
+        <span className="clamp text-xs font-normal mt-4 w-full ">{body}</span>
       </div>
     </div>
   );

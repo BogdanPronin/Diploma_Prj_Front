@@ -2,13 +2,14 @@ import React from "react";
 import { useState } from "react";
 
 export default function SideNav({ onSelectCategory }) {
-  const [activeTab, setActiveTab] = useState("Inbox");
+  const [activeTab, setActiveTab] = useState("INBOX");
 
   const navItems = [
-    { id: "Inbox", name: "Входящие" },
-    { id: "Drafts", name: "Черновики" },
-    { id: "Sent", name: "Отправленные" },
-    { id: "Trash", name: "Мусор" },
+    { id: "INBOX", name: "Входящие" },
+    { id: "Черновики", name: "Черновики" },
+    { id: "Отправленные", name: "Отправленные" },
+    { id: "Корзина", name: "Мусор" },
+    { id: "Archive", name: "Архив" },
   ];
 
   return (
@@ -17,8 +18,9 @@ export default function SideNav({ onSelectCategory }) {
         <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
         <span className="font-semibold text-light-100 ml-4 text-2xl">Messenger-Mail</span>
       </div>
+
       <ul>
-      {navItems.map((navItem, index) => (
+        {navItems.map((navItem, index) => (
           <li
             key={navItem.id}
             className={`cursor-pointer flex items-center relative py-2 transition-all
@@ -29,14 +31,15 @@ export default function SideNav({ onSelectCategory }) {
               onSelectCategory(navItem.id);
             }}
           >
-            {/* Линия слева у активного пункта */}
+            {/* Линия слева у активногFо пункта */}
             {activeTab === navItem.id && (
-              <div className="w-10 h-[2px] bg-light-200 absolute -left-12"></div>
+              <div className="w-6 h-[2px] bg-light-200 absolute -left-12"></div>
             )}
-            <span className="text-light-200 text-sm">{navItem.name}</span>
+            <p className="text-light-200 text-lm w-32">{navItem.name}</p>
           </li>
         ))}
       </ul>
+      
     </nav>
   );
 }

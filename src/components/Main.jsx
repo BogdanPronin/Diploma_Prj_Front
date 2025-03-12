@@ -4,12 +4,15 @@ import EmailDetails from "./EmailDetails";
 import EmailList from "./EmailList";
 import ComposeEmail from "./ComposeEmail";
 import SideNav from "./SideNav";
-import { fetchEmails, deleteEmail } from "../api"; // Подключаем API-функции
+import { fetchEmails, deleteEmail, sendEmail } from "../api/emails"; // Подключаем API-функции
+import Modal from "react-modal";
+
+Modal.setAppElement('#root'); // для accessibility
 
 export default function Main() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [category, setCategory] = useState("Inbox");
+  const [category, setCategory] = useState("INBOX");
   const [emails, setEmails] = useState([]); // Список писем
   const [drafts, setDrafts] = useState([]); // Список черновиков
   const [currentDraft, setCurrentDraft] = useState(null); // Текущий черновик
@@ -88,28 +91,44 @@ export default function Main() {
       <SideNav onSelectCategory={setCategory} />
       <div className="flex flex-col flex-grow">
         <ContentHeader />
+
         <div className="flex flex-row flex-grow h-[calc(100%-64px)] overflow-hidden">
-          <div className="w-[35%] min-w-[300px] h-full overflow-hidden">
-            <EmailList 
-              onSelectEmail={handleSelectEmail} 
-              category={category} 
-              onCompose={handleCompose} 
-              drafts={drafts} 
+          
+          <div className="w-[35%] h-full overflow-hidden">
+            <EmailList
+              onSelectEmail={handleSelectEmail}
+              category={category}
+              onCompose={handleCompose}
+              drafts={drafts}
               selectedEmail={selectedEmail}
               emails={emails} // Передаем список писем
             />
           </div>
+
           <div className="flex-grow h-full">
             {isComposing ? (
-              <ComposeEmail 
-                onSendEmail={() => setIsComposing(false)} 
-                draft={currentDraft} 
-                setDraft={setCurrentDraft} 
+              <ComposeEmail
+                isOpen={isComposing}
+                onRequestClose={() => setIsComposing(false)}
+                onSendEmail={(email) => {
+                  sendEmail(email)
+                    .then((res) => {
+                      console.log("✅ Письмо успешно отправлено:", res);
+                      setIsComposing(false);
+                      setCurrentDraft(null);
+                    })
+                    .catch((error) => {
+                      console.error("❌ Ошибка при отправке письма:", error);
+                    });
+                }}
+                draft={currentDraft}
+                setDraft={setCurrentDraft}
               />
+
             ) : selectedEmail ? (
-              <EmailDetails 
-                email={selectedEmail} 
-                setSelectedEmail={setSelectedEmail} 
+              <EmailDetails
+                email={selectedEmail}
+                setSelectedEmail={setSelectedEmail}
                 onEmailDeleted={handleDeleteEmail} // Передаем функцию удаления
               />
             ) : (
@@ -119,7 +138,10 @@ export default function Main() {
             )}
           </div>
         </div>
+
       </div>
+
+
     </main>
   );
 }

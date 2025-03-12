@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css"; 
+import "react-quill/dist/quill.snow.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt, faTimes } from "@fortawesome/free-solid-svg-icons";
 
@@ -9,8 +9,8 @@ const formatFileSize = (size) => {
   return size < 1024
     ? `${size} B`
     : size < 1048576
-    ? `${(size / 1024).toFixed(1)} KB`
-    : `${(size / 1048576).toFixed(1)} MB`;
+      ? `${(size / 1024).toFixed(1)} KB`
+      : `${(size / 1048576).toFixed(1)} MB`;
 };
 
 // Функция для определения иконки по MIME-типу
@@ -66,9 +66,14 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
   const handleSend = () => {
     if (email.to.trim() && email.subject.trim() && email.body.trim()) {
       console.log("Email sent:", email);
-      onSendEmail();
+      onSendEmail(email);  // ⬅️ обязательно передаем объект email
+    } else {
+      alert("Заполните все поля перед отправкой!");
     }
   };
+
+
+
 
   // Вычисляем количество файлов и их суммарный размер
   const totalFileSize = useMemo(() => {
@@ -81,6 +86,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
     <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4">
       <input className="p-2 rounded" name="to" placeholder="To" value={email.to} onChange={handleChange} />
       <input className="p-2 rounded" name="subject" placeholder="Subject" value={email.subject} onChange={handleChange} />
+
 
       <ReactQuill
         value={email.body}
@@ -100,16 +106,22 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
         }}
         theme="snow"
         placeholder="Write your message..."
-        className="bg-white rounded p-2"
+        className="bg-white  h-96 pb-20"
       />
-
       {/* Форма загрузки файлов */}
       <div className="mt-4">
-        <input type="file" multiple onChange={handleFileUpload} className="hidden" uid="file-upload" />
+        <input
+          type="file"
+          multiple
+          onChange={handleFileUpload} // убедись, что имя обработчика совпадает
+          id="file-upload" // именно id, а не uid
+          className="hidden"
+        />
         <label htmlFor="file-upload" className="cursor-pointer bg-blue-200 text-white px-4 py-2 rounded-md">
           Attach Files
         </label>
       </div>
+
 
       {/* Отображение загруженных файлов */}
       {fileCount > 0 && (
