@@ -81,3 +81,75 @@ export const sendEmail = async (email) => {
   }
 }
 
+export const moveEmailToTrash = async (uid) => {
+  try {
+    const response = await fetch("http://localhost:3001/move-to-trash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid }),
+    });
+
+    if (!response.ok) throw new Error("Ошибка при перемещении письма");
+    return await response.json();
+  } catch (error) {
+    console.error("Ошибка при перемещении письма:", error);
+    throw error;
+  }
+};
+
+export const deleteEmailForever = async (uid, currentFolder) => {
+  const response = await fetch("http://localhost:3001/delete-forever", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid, currentFolder }),
+  });
+
+  if (!response.ok) throw new Error("Ошибка при окончательном удалении письма");
+  return await response.json();
+};
+
+export const markEmailsAsRead = async (uids) => {
+  if (!uids || uids.length === 0) {
+    console.warn("⚠️ Пропущен запрос: нет UID писем для отметки как прочитанных.");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:3001/mark-read-batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uids }),
+    });
+
+    if (!response.ok) throw new Error("Ошибка при пометке писем как прочитанных");
+
+    console.log("✅ Письма успешно помечены как прочитанные:", uids);
+    return await response.json();
+  } catch (error) {
+    console.error("❌ Ошибка при пометке писем:", error);
+    throw error;
+  }
+};
+
+export const fetchEmailsFromSender = async (senderEmail) => {
+  try {
+    const response = await fetch(`http://localhost:3001/emails-from-sender?sender=${senderEmail}`);
+    if (!response.ok) throw new Error("Ошибка при получении входящих писем");
+    return await response.json();
+  } catch (error) {
+    console.error("Ошибка при получении входящих писем:", error);
+    return [];
+  }
+};
+
+export const fetchEmailsSentTo = async (recipientEmail) => {
+  try {
+    const response = await fetch(`http://localhost:3001/emails-sent-to?recipient=${recipientEmail}`);
+    if (!response.ok) throw new Error("Ошибка при получении отправленных писем");
+    return await response.json();
+  } catch (error) {
+    console.error("Ошибка при получении отправленных писем:", error);
+    return [];
+  }
+};
+

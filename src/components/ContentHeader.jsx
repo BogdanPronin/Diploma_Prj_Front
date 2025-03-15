@@ -20,8 +20,8 @@ export default function ContentHeader() {
       <FontAwesomeIcon icon={faFolder} className="text-light-600 mx-2" />
       <FontAwesomeIcon icon={faBell} className="text-light-600 mx-2" />
       <FontAwesomeIcon icon={faEnvelope} className="text-light-600 mx-2" />
-      <div className="w-8 h-8 bg-blue-200 rounded-xl ml-8 mr-4"></div>
-      <span className="font-light text-xs text-light-100">Charlie Grant</span>
+      <div className="w-8 h-8 bg-green-200 rounded-xl ml-8 mr-4"></div>
+      <span className="font-light text-xs text-light-100">Бодюн Данилов</span>
     </div>
   );
 }

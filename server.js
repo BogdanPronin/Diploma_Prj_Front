@@ -269,6 +269,336 @@ app.get('/folders', (req, res) => {
   imap.connect();
 });
 
+// Перемещение письма в другую папку по UID
+app.post('/move-to-trash', (req, res) => {
+  const { uid } = req.body;
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: 'imap.mail.ru',
+    port: 993,
+    tls: true,
+  });
+
+  imap.once('ready', () => {
+    imap.openBox('INBOX', false, (err) => {
+      if (err) {
+        console.error('Ошибка при открытии INBOX:', err);
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      // Перемещаем письмо в папку Trash
+      imap.move(req.body.uid, 'Корзина', (err) => {
+        if (err) {
+          console.error('Ошибка при перемещении письма:', err);
+          res.status(500).json({ error: err.toString() });
+        } else {
+          res.json({ message: `Письмо с UID ${req.body.uid} перемещено в Корзина.` });
+        }
+        imap.end();
+      });
+    });
+  });
+
+  imap.once('error', (err) => {
+    console.error('Ошибка IMAP:', err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.connect();
+});
+
+app.post('/delete-forever', (req, res) => {
+  const { uid } = req.body;
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: 'imap.mail.ru',
+    port: 993,
+    tls: true
+  });
+
+  function openFolder(callback) {
+    imap.openBox('Корзина', false, callback);
+  }
+
+  imap.once('ready', () => {
+    openFolder((err) => {
+      if (err) {
+        console.error('Ошибка при открытии папки:', err);
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      // Удаляем письмо навсегда
+      imap.addFlags(uid, '\\Deleted', (err) => {
+        if (err) {
+          console.error('Ошибка при добавлении флага удаления:', err);
+          res.status(500).json({ error: err.toString() });
+          imap.end();
+          return;
+        }
+
+        imap.expunge(uid, (expungeErr) => {
+          if (expungeErr) {
+            console.error('Ошибка при окончательном удалении письма:', expungeErr);
+            res.status(500).json({ error: expungeErr.toString() });
+          } else {
+            console.log(`✅ Письмо UID ${uid} окончательно удалено.`);
+            res.json({ message: 'Письмо удалено навсегда' });
+          }
+          imap.end();
+        });
+      });
+    });
+  });
+
+  imap.once('error', (err) => {
+    console.error('Ошибка IMAP:', err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.once('end', () => {
+    console.log('Соединение завершено');
+  });
+
+  imap.connect();
+});
+
+app.post('/mark-read-batch', (req, res) => {
+  const { uids } = req.body;
+
+  if (!uids || !Array.isArray(uids) || uids.length === 0) {
+    console.error("❌ Ошибка: Передан пустой или некорректный массив UID.");
+    return res.status(400).json({ error: 'Передайте массив UID писем' });
+  }
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: 'imap.mail.ru',
+    port: 993,
+    tls: true
+  });
+
+  function openInbox(callback) {
+    imap.openBox('INBOX', false, callback);
+  }
+
+  imap.once('ready', () => {
+    openInbox((err) => {
+      if (err) {
+        console.error("❌ Ошибка при открытии INBOX:", err);
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      console.log(`📩 Помечаем как прочитанные письма с UID: ${uids.join(", ")}`);
+
+      imap.addFlags(uids, '\\Seen', (err) => {
+        if (err) {
+          console.error("❌ Ошибка при добавлении флага \\Seen:", err);
+          res.status(500).json({ error: err.toString() });
+        } else {
+          console.log("✅ Успешно помечены как прочитанные:", uids);
+          res.json({ message: 'Письма успешно помечены как прочитанные' });
+        }
+        imap.end();
+      });
+    });
+  });
+
+  imap.once('error', (err) => {
+    console.error("❌ Ошибка IMAP:", err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.connect();
+});
+
+app.get("/emails-from-sender", (req, res) => {
+  const senderEmail = req.query.sender;
+  if (!senderEmail) return res.status(400).json({ error: "Не указан отправитель" });
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: "imap.mail.ru",
+    port: 993,
+    tls: true,
+  });
+
+  function openInbox(callback) {
+    imap.openBox("INBOX", true, callback);
+  }
+
+  imap.once("ready", () => {
+    openInbox((err) => {
+      if (err) {
+        console.error("Ошибка при открытии INBOX:", err);
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      imap.search([["FROM", senderEmail]], (err, results) => {
+        if (err || !results.length) {
+          imap.end();
+          return res.json([]);
+        }
+
+        const messages = [];
+        const fetch = imap.fetch(results, { bodies: "", struct: true });
+
+        fetch.on("message", (msg) => {
+          let buffer = "";
+          let attributes = {};
+
+          msg.on("body", (stream) => {
+            stream.on("data", (chunk) => {
+              buffer += chunk.toString("utf8");
+            });
+          });
+
+          msg.once("attributes", (attrs) => {
+            attributes = attrs;
+          });
+
+          msg.once("end", () => {
+            simpleParser(buffer, (err, parsed) => {
+              if (!err) {
+                messages.push({
+                  uid: attributes.uid,
+                  subject: parsed.subject || "<Без темы>",
+                  from: parsed.from,
+                  to: parsed.to,
+                  date: parsed.date,
+                  text: parsed.text,
+                  html: parsed.html,
+                  isRead: attributes.flags.includes("\\Seen"),
+                  attachments: parsed.attachments.map((file) => ({
+                    filename: file.filename,
+                    size: file.size,
+                    mimeType: file.contentType,
+                  })),
+                });
+              }
+
+              if (messages.length === results.length) {
+                messages.sort((a, b) => new Date(a.date) - new Date(b.date));
+                imap.end();
+                res.json(messages);
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+
+  imap.once("error", (err) => {
+    console.error("Ошибка IMAP:", err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.connect();
+});
+
+
+app.get("/emails-sent-to", (req, res) => {
+  const recipientEmail = req.query.recipient;
+  if (!recipientEmail) return res.status(400).json({ error: "Не указан получатель" });
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: "imap.mail.ru",
+    port: 993,
+    tls: true,
+  });
+
+  function openSent(callback) {
+    imap.openBox("Отправленные", true, callback);
+  }
+
+  imap.once("ready", () => {
+    openSent((err) => {
+      if (err) {
+        console.error("Ошибка при открытии Sent:", err);
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      imap.search([["TO", recipientEmail]], (err, results) => {
+        if (err || !results.length) {
+          imap.end();
+          return res.json([]);
+        }
+
+        const messages = [];
+        const fetch = imap.fetch(results, { bodies: "", struct: true });
+
+        fetch.on("message", (msg) => {
+          let buffer = "";
+          let attributes = {};
+
+          msg.on("body", (stream) => {
+            stream.on("data", (chunk) => {
+              buffer += chunk.toString("utf8");
+            });
+          });
+
+          msg.once("attributes", (attrs) => {
+            attributes = attrs;
+          });
+
+          msg.once("end", () => {
+            simpleParser(buffer, (err, parsed) => {
+              if (!err) {
+                messages.push({
+                  uid: attributes.uid,
+                  subject: parsed.subject || "<Без темы>",
+                  from: parsed.from,
+                  to: parsed.to,
+                  date: parsed.date,
+                  text: parsed.text,
+                  html: parsed.html,
+                  isRead: attributes.flags.includes("\\Seen"),
+                  attachments: parsed.attachments.map((file) => ({
+                    filename: file.filename,
+                    size: file.size,
+                    mimeType: file.contentType,
+                  })),
+                });
+              }
+
+              if (messages.length === results.length) {
+                messages.sort((a, b) => new Date(a.date) - new Date(b.date));
+                imap.end();
+                res.json(messages);
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+
+  imap.once("error", (err) => {
+    console.error("Ошибка IMAP:", err);
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.connect();
+});
+
 
 // Запуск сервера
 const PORT = process.env.PORT || 3000;

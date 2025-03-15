@@ -2,13 +2,17 @@ import {
   faEllipsisH,
   faReply,
   faTrashCan,
+  faComments,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt } from "@fortawesome/free-solid-svg-icons";
 import { deleteEmail } from "../mock-api"; // Функция удаления писем
 import { formatFileSize, getFileIcon, parseSender } from "./utils";
+import { useState } from "react";
+import ChatView from "./ChatView";
 
 export default function EmailDetails({ email, onEmailDeleted }) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   if (!email) {
     console.log("EmailDetails: Нет выбранного письма");
     return (
@@ -20,11 +24,11 @@ export default function EmailDetails({ email, onEmailDeleted }) {
 
   const handleDelete = () => {
     console.log(`🗑 Удаление письма uid: ${email.uid}...`);
-  
+
     deleteEmail(email.uid)
       .then(() => {
         console.log(`✅ Письмо uid ${email.uid} успешно перемещено в корзину`);
-  
+
         if (onEmailDeleted) {
           console.log("🔄 Вызываем onEmailDeleted() для обновления списка");
           onEmailDeleted(email.uid);
@@ -37,7 +41,7 @@ export default function EmailDetails({ email, onEmailDeleted }) {
   const { name, email: senderEmail } = parseSender(email.from.text || "");
 
   return (
-    <div className="flex flex-col bg-dark-500 overflow-y-scroll">
+    <div className="flex flex-col bg-dark-500 ">
       <span className="text-2xs text-center text-light-600 my-6">13 / 13</span>
       <div className="flex items-center px-10">
         <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
@@ -46,6 +50,9 @@ export default function EmailDetails({ email, onEmailDeleted }) {
           <span className="text-xs text-light-400">{senderEmail}</span>
         </div>
         <div className="flex ml-auto">
+          <FontAwesomeIcon icon={faComments} className="mx-2 text-light-200 cursor-pointer" 
+            onClick={() => setIsChatOpen(true)} // Открыть чат
+          />
           <FontAwesomeIcon icon={faReply} className="mx-2 text-light-200 cursor-pointer" />
           <FontAwesomeIcon icon={faTrashCan} className="mx-2 text-light-200 cursor-pointer" onClick={handleDelete} />
           <FontAwesomeIcon icon={faEllipsisH} className="mx-2 text-light-200 cursor-pointer" />
@@ -90,6 +97,13 @@ export default function EmailDetails({ email, onEmailDeleted }) {
           </ul>
         </div>
       )}
+
+      {/* Окно чата */}
+      <ChatView
+        isOpen={isChatOpen}
+        onRequestClose={() => setIsChatOpen(false)}
+        senderEmail={senderEmail}
+      />
     </div>
   );
 }

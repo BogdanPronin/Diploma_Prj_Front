@@ -3,6 +3,7 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { toast } from 'react-toastify';
 
 // Функция для форматирования размера файла
 const formatFileSize = (size) => {
@@ -67,6 +68,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
     if (email.to.trim() && email.subject.trim() && email.body.trim()) {
       console.log("Email sent:", email);
       onSendEmail(email);  // ⬅️ обязательно передаем объект email
+      toast.success("Письмо отправлено");
     } else {
       alert("Заполните все поля перед отправкой!");
     }

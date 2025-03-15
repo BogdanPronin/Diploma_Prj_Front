@@ -8,7 +8,7 @@ export default function SideNav({ onSelectCategory }) {
     { id: "INBOX", name: "Входящие" },
     { id: "Черновики", name: "Черновики" },
     { id: "Отправленные", name: "Отправленные" },
-    { id: "Корзина", name: "Мусор" },
+    { id: "Корзина", name: "Корзина" },
     { id: "Archive", name: "Архив" },
   ];
 
