@@ -6,9 +6,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { deleteEmail } from "../mock-api"; // Функция удаления писем
-import { formatFileSize, getFileIcon, parseSender } from "./utils";
+import { formatFileSize, getFileIcon, parseSender, formatEmailDateFull } from "./utils"; // 🔹 Импортируем новую функцию
 import { useState } from "react";
 import ChatView from "./ChatView";
+import { downloadAttachment } from "../api/emails"; // 🔹 Подключаем API скачивания файлов
 
 export default function EmailDetails({ email, onEmailDeleted }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -41,16 +42,15 @@ export default function EmailDetails({ email, onEmailDeleted }) {
   const { name, email: senderEmail } = parseSender(email.from.text || "");
 
   return (
-    <div className="flex flex-col bg-dark-500 ">
-      <span className="text-2xs text-center text-light-600 my-6">13 / 13</span>
-      <div className="flex items-center px-10">
+    <div className="flex flex-col bg-dark-500 p-6 rounded-xl">
+      <div className="flex items-center">
         <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
         <div className="flex flex-col">
           <span className="text-sm text-light-200 font-medium">{name}</span>
           <span className="text-xs text-light-400">{senderEmail}</span>
         </div>
         <div className="flex ml-auto">
-          <FontAwesomeIcon icon={faComments} className="mx-2 text-light-200 cursor-pointer" 
+          <FontAwesomeIcon icon={faComments} className="mx-2 text-light-200 cursor-pointer"
             onClick={() => setIsChatOpen(true)} // Открыть чат
           />
           <FontAwesomeIcon icon={faReply} className="mx-2 text-light-200 cursor-pointer" />
@@ -58,8 +58,8 @@ export default function EmailDetails({ email, onEmailDeleted }) {
           <FontAwesomeIcon icon={faEllipsisH} className="mx-2 text-light-200 cursor-pointer" />
         </div>
       </div>
-      <span className="px-10 text-2xs text-light-600 font-bold mt-6">{email.date}</span>
-      <span className="px-10 text-lg text-light-100 font-light mb-6">{email.subject}</span>
+      <span className="text-xs text-light-600 font-bold mt-4">{formatEmailDateFull(email.date)}</span> {/* 🔹 Используем новую функцию */}
+      <span className="text-lg text-light-100 font-light mb-6">{email.subject}</span>
 
       {/* Контент письма */}
       <iframe
@@ -74,31 +74,30 @@ export default function EmailDetails({ email, onEmailDeleted }) {
         title="Email Content"
       />
 
-      {/* Блок вложений */}
+      {/* 🔹 Блок вложений */}
       {email.attachments && email.attachments.length > 0 && (
-        <div className="mt-6 px-10">
-          <h3 className="text-light-300 mb-2">Attachments:</h3>
-          <ul className="bg-dark-400 p-3 rounded-lg">
+        <div className="mt-6 rounded-3xl drop-shadow-2xl transition-all duration-200">
+          <h3 className="text-light-300 mb-2">Вложения:</h3>
+          <ul className="bg-dark-500 p-3 rounded-lg">
             {email.attachments.map((file, index) => (
               <li key={index} className="flex items-center justify-between text-white p-2 border-b border-gray-600 last:border-0">
                 <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-gray-300 text-lg" />
-                  <span>{file.name} ({formatFileSize(file.size)})</span>
+                  <FontAwesomeIcon icon={getFileIcon(file.mimeType)} className="text-gray-300 text-lg" />
+                  <span>{file.filename} ({formatFileSize(file.size)})</span>
                 </div>
-                <a
-                  href={file.fileObj ? URL.createObjectURL(file.fileObj) : "#"}
-                  download={file.name}
-                  className="text-blue-300 underline"
+                <button
+                  onClick={() => downloadAttachment(email.uid, file.filename)}
+                  className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl"
                 >
-                  Download
-                </a>
+                  Скачать
+                </button>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Окно чата */}
+      {/* 🔹 Окно чата */}
       <ChatView
         isOpen={isChatOpen}
         onRequestClose={() => setIsChatOpen(false)}

@@ -43,17 +43,36 @@ export function formatEmailDate(dateString) {
   }
 }
 
+export function formatEmailDateFull(dateString) {
+  if (!dateString) return "Неизвестная дата";
+
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Некорректная дата";
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+
 // Функция для парсинга отправителя
 export function parseSender(senderString) {
-  const match = senderString.match(/"([^"]+)"\s*<([^>]+)>/);
-  if (match) {
-    return {
-      name: match[1],
-      email: match[2]
-    };
+  if (!senderString || typeof senderString !== "string") {
+    return { name: "Неизвестный отправитель", email: "" };
   }
-  return {
-    name: senderString,
-    email: ""
-  };
+
+  const match = senderString.match(/"([^"]+)"\s*<([^>]+)>/);
+  const emailMatch = senderString.match(/<([^>]+)>/);
+
+  if (match) {
+    return { name: match[1], email: match[2] };
+  } else if (emailMatch) {
+    return { name: emailMatch[1], email: emailMatch[1] }; // Если только email, используем его как имя
+  } else {
+    return { name: senderString, email: senderString }; // Если вообще без скобок
+  }
 }

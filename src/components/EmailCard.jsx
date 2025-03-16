@@ -4,7 +4,7 @@ import "./EmailCard.css";
 import { formatEmailDate, parseSender } from "./utils";
 
 export default function EmailCard(props) {
-  const { image, from, date, subject, body, hasAttachment, isSelected, onClick, isRead } = props;
+  const { image, from, date, subject, body, attachments, isSelected, onClick, isRead } = props;
 
   // Форматируем дату перед отображением
   const formattedDate = date ? formatEmailDate(date) : "-";
@@ -12,12 +12,15 @@ export default function EmailCard(props) {
   // Парсим отправителя
   const { name, email } = parseSender(from.text || "");
 
+  // Определяем, есть ли вложения
+  const hasAttachment = attachments && attachments.length > 0;
+
   // Получаем первую букву имени отправителя
   const firstLetter = name.charAt(0).toUpperCase();
 
   // Получаем первую букву второго слова (если есть)
   const words = name.split(" ");
-  const secondLetter = words.length > 1 ? words[1].charAt(0).toUpperCase() : "";
+  const secondLetter = words.length > 1 ? words[1].charAt(0).toUpperCase() : " ";
 
   return (
     <div
@@ -35,13 +38,19 @@ export default function EmailCard(props) {
       <div className="flex flex-col w-full ml-3">
         <div className="flex items-center">
           <span className="text-xs font-medium mr-auto">{name}</span>
-          {hasAttachment && <FontAwesomeIcon icon={faPaperclip} className="mr-2" />}
+
+
+
           <div className="flex items-center space-x-2">
             {!isRead && (
               <FontAwesomeIcon
                 icon={faCircle}
                 className="text-xs text-blue-400"
               />
+            )}
+            {/* 🔹 Показываем скрепку, если у письма есть вложения */}
+            {hasAttachment && (
+              <FontAwesomeIcon icon={faPaperclip} className="text-gray-400 text-sm mr-2" />
             )}
             <span className="bg-dark-400 text-xs font-medium px-3 py-1 rounded-xl">
               {formattedDate}

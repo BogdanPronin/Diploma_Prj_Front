@@ -179,6 +179,7 @@ export default function Main() {
                 }}
                 draft={currentDraft}
                 setDraft={setCurrentDraft}
+                onClose={() => setIsComposing(false)}
               />
 
             ) : selectedEmail ? (

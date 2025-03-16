@@ -53,33 +53,36 @@ export const markEmailAsRead = async (uids) => {
 export const sendEmail = async (email) => {
   try {
     const formData = new FormData();
-    formData.append("to", email.to);
-    formData.append("subject", email.subject);
-    formData.append("text", email.body);
-    formData.append("html", email.body);
+    formData.append("to", email.to.trim());
+    formData.append("subject", email.subject.trim());
+    formData.append("html", email.body.trim());
 
-    // 👇 проверка на attachments перед циклом
     if (email.attachments && email.attachments.length > 0) {
       email.attachments.forEach((attachment) => {
-        formData.append("attachments", attachment.fileObj);
+        console.log("📎 Прикрепляем файл:", attachment.name); // Отладка
+        formData.append("attachments", attachment.fileObj, attachment.name);
       });
     }
 
-    const response = await fetch('http://localhost:3001/send', {
+    console.log("📩 Отправляем письмо:", Object.fromEntries(formData)); // Проверяем, что отправляется
+
+    const response = await fetch("http://localhost:3001/send", {
       method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error("Ошибка при отправке письма");
+      throw new Error(`Ошибка при отправке письма: ${await response.text()}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Ошибка при отправке письма:", error);
+    console.error("❌ Ошибка при отправке письма:", error);
     throw error;
   }
-}
+};
+
+
 
 export const moveEmailToTrash = async (uid) => {
   try {
@@ -150,6 +153,25 @@ export const fetchEmailsSentTo = async (recipientEmail) => {
   } catch (error) {
     console.error("Ошибка при получении отправленных писем:", error);
     return [];
+  }
+};
+
+export const downloadAttachment = async (uid, filename) => {
+  try {
+    const response = await fetch(`http://localhost:3001/download-attachment?uid=${uid}&filename=${filename}`);
+    if (!response.ok) throw new Error("Ошибка при скачивании файла");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Ошибка при скачивании файла:", error);
   }
 };
 

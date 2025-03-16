@@ -20,12 +20,23 @@ const mailConfig = {
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() }); // храним файлы в памяти
 
-app.post('/send', upload.array('attachments'), async (req, res) => {
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // ✅ Добавляем поддержку FormData
+
+app.post("/send", upload.array("attachments"), async (req, res) => {
   const { to, subject, html } = req.body;
   const attachments = req.files;
 
+  console.log("📩 Данные, полученные на сервере:", req.body);
+
+  if (!to || to.trim() === "") {
+    console.error("❌ Ошибка: Не указан получатель письма.");
+    return res.status(400).json({ error: "Не указан получатель письма" });
+  }
+
   const transporter = nodemailer.createTransport({
-    host: 'smtp.mail.ru',
+    host: "smtp.mail.ru",
     port: 465,
     secure: true,
     auth: {
@@ -34,8 +45,7 @@ app.post('/send', upload.array('attachments'), async (req, res) => {
     },
   });
 
-  // Формируем массив вложений для nodemailer
-  const formattedAttachments = attachments?.map(file => ({
+  const formattedAttachments = attachments?.map((file) => ({
     filename: file.originalname,
     content: file.buffer,
   }));
@@ -43,18 +53,21 @@ app.post('/send', upload.array('attachments'), async (req, res) => {
   try {
     let info = await transporter.sendMail({
       from: mailConfig.user,
-      to,
-      subject,
-      html,
-      attachments: formattedAttachments, // прикрепляем вложения
+      to: to.trim(), // ✅ Убираем пробелы
+      subject: subject.trim(),
+      html: html.trim(),
+      attachments: formattedAttachments,
     });
 
-    res.json({ message: 'Письмо успешно отправлено', info });
+    res.json({ message: "Письмо успешно отправлено", info });
   } catch (error) {
-    console.error('Ошибка при отправке письма:', error);
+    console.error("❌ Ошибка при отправке письма:", error);
     res.status(500).json({ error: error.toString() });
   }
 });
+
+
+
 
 
 /**
@@ -63,7 +76,7 @@ app.post('/send', upload.array('attachments'), async (req, res) => {
  */
 app.get('/receive', (req, res) => {
   const category = req.query.category || "INBOX";
-  const beforeUid = req.query.beforeUid; // 👈 Для подгрузки старых писем
+  const beforeUid = req.query.beforeUid;
   const limit = Number(req.query.limit) || 10;
 
   const imap = new Imap({
@@ -86,7 +99,6 @@ app.get('/receive', (req, res) => {
         return;
       }
 
-      // Поиск непрочитанных писем
       imap.search(['UNSEEN'], (err, unreadResults) => {
         if (err) {
           res.status(500).json({ error: err.toString() });
@@ -96,9 +108,8 @@ app.get('/receive', (req, res) => {
 
         const totalUnreadMessages = unreadResults.length;
 
-        // Поиск всех писем (или писем старше beforeUid)
         const searchCriteria = beforeUid 
-          ? [['UID', `1:${beforeUid - 1}`]] // письма старше указанного UID
+          ? [['UID', `1:${beforeUid - 1}`]]
           : ['ALL'];
 
         imap.search(searchCriteria, (err, results) => {
@@ -112,7 +123,6 @@ app.get('/receive', (req, res) => {
           }
 
           const latestUids = results.slice(-limit).reverse();
-
           const messages = [];
           const fetch = imap.fetch(latestUids, { bodies: '', struct: true });
 
@@ -141,7 +151,12 @@ app.get('/receive', (req, res) => {
                     date: parsed.date,
                     text: parsed.text,
                     html: parsed.html,
-                    isRead: attributes.flags.includes('\\Seen')
+                    isRead: attributes.flags.includes('\\Seen'),
+                    attachments: parsed.attachments.map((file) => ({
+                      filename: file.filename,
+                      mimeType: file.contentType,
+                      size: file.size || 0, // Добавляем размер файла
+                    }))
                   });
                 }
 
@@ -174,9 +189,6 @@ app.get('/receive', (req, res) => {
 
   imap.connect();
 });
-
-
-
 
 /**
  * Эндпоинт для установки флага "прочитано" для указанных писем.
@@ -598,6 +610,78 @@ app.get("/emails-sent-to", (req, res) => {
 
   imap.connect();
 });
+
+const fs = require('fs');
+const path = require('path');
+
+app.get('/download-attachment', (req, res) => {
+  const { uid, filename } = req.query;
+
+  if (!uid || !filename) {
+    return res.status(400).json({ error: "Не указан UID письма или имя файла" });
+  }
+
+  const imap = new Imap({
+    user: mailConfig.user,
+    password: mailConfig.pass,
+    host: 'imap.mail.ru',
+    port: 993,
+    tls: true
+  });
+
+  function openInbox(callback) {
+    imap.openBox("INBOX", true, callback);
+  }
+
+  imap.once('ready', () => {
+    openInbox((err, box) => {
+      if (err) {
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+        return;
+      }
+
+      const fetch = imap.fetch([uid], { bodies: '', struct: true });
+
+      fetch.on('message', (msg) => {
+        msg.on('body', (stream, info) => {
+          let buffer = '';
+          stream.on('data', (chunk) => {
+            buffer += chunk.toString('utf8');
+          });
+
+          stream.once('end', () => {
+            simpleParser(buffer, (err, parsed) => {
+              if (!err) {
+                const attachment = parsed.attachments.find(a => a.filename === filename);
+                if (!attachment) {
+                  res.status(404).json({ error: "Файл не найден" });
+                } else {
+                  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                  res.setHeader('Content-Type', attachment.contentType);
+                  res.send(attachment.content);
+                }
+              }
+              imap.end();
+            });
+          });
+        });
+      });
+
+      fetch.once('error', (err) => {
+        res.status(500).json({ error: err.toString() });
+        imap.end();
+      });
+    });
+  });
+
+  imap.once('error', (err) => {
+    res.status(500).json({ error: err.toString() });
+  });
+
+  imap.connect();
+});
+
 
 
 // Запуск сервера

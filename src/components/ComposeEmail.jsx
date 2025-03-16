@@ -24,7 +24,7 @@ const getFileIcon = (type) => {
   return faFileAlt;
 };
 
-export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
+export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
   const [email, setEmail] = useState(
     draft || { uid: Date.now(), to: "", subject: "", body: "", attachments: [] }
   );
@@ -69,13 +69,11 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
       console.log("Email sent:", email);
       onSendEmail(email);  // ⬅️ обязательно передаем объект email
       toast.success("Письмо отправлено");
+      onClose()
     } else {
       alert("Заполните все поля перед отправкой!");
     }
   };
-
-
-
 
   // Вычисляем количество файлов и их суммарный размер
   const totalFileSize = useMemo(() => {
@@ -146,8 +144,10 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft }) {
           </ul>
         </div>
       )}
-
-      <button className="bg-blue-200 p-2 rounded text-white mt-4" onClick={handleSend}>Send</button>
+      <div className="flex justify-end gap-4">
+        <button className="bg-gray-500 p-2 rounded text-white" onClick={onClose}>Cancel</button>
+        <button className="bg-blue-200 p-2 rounded text-white" onClick={handleSend}>Send</button>
+      </div>
     </div>
   );
 }
