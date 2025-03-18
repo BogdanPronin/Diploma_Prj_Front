@@ -109,7 +109,7 @@ app.get('/receive', (req, res) => {
         const totalUnreadMessages = unreadResults.length;
 
         const searchCriteria = beforeUid 
-          ? [['UID', `1:${beforeUid - 1}`]]
+          ? [['UID', `1:${beforeUid - 1}`]] // ✅ Теперь ищем только письма старше beforeUid
           : ['ALL'];
 
         imap.search(searchCriteria, (err, results) => {
@@ -155,7 +155,7 @@ app.get('/receive', (req, res) => {
                     attachments: parsed.attachments.map((file) => ({
                       filename: file.filename,
                       mimeType: file.contentType,
-                      size: file.size || 0, // Добавляем размер файла
+                      size: file.size || 0,
                     }))
                   });
                 }
@@ -189,6 +189,7 @@ app.get('/receive', (req, res) => {
 
   imap.connect();
 });
+
 
 /**
  * Эндпоинт для установки флага "прочитано" для указанных писем.

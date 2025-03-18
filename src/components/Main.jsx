@@ -29,8 +29,8 @@ export default function Main() {
     });
   }, [category]);
 
-   // Отметка писем как прочитанных перед закрытием страницы
-   useEffect(() => {
+  // Отметка писем как прочитанных перед закрытием страницы
+  useEffect(() => {
     const markAsReadOnUnload = async () => {
       if (unreadUids.size > 0) {
         try {
@@ -61,7 +61,7 @@ export default function Main() {
       markAsReadOnUnload(); // Обрабатываем размонтирование компонента
     };
   }, [unreadUids]);
-  
+
   // Проверка, является ли черновик непустым
   const isDraftNotEmpty = (draft) => {
     return draft && (draft.to.trim() || draft.subject.trim() || draft.body.trim());
@@ -84,32 +84,44 @@ export default function Main() {
   // Функция выбора письма (если черновик — открываем редактор)
   const handleSelectEmail = (email) => {
     setSelectedEmail(email);
-  
+
     if (!email.isRead) {
       setUnreadUids((prev) => new Set(prev).add(email.uid));
     }
   };
 
+  const loadMoreEmails = async (beforeUid) => {
+    try {
+      const data = await fetchEmails(category, beforeUid);
+      setEmails((prevEmails) => ({
+        ...prevEmails,
+        messages: [...prevEmails.messages, ...data.messages],
+      }));
+    } catch (error) {
+      console.error("❌ Ошибка при загрузке дополнительных писем:", error);
+    }
+  };
+
   // const handleDeleteEmail = (emailId) => {
   //   console.log(`🗑 Удаление письма uid: ${emailId}...`);
-  
+
   //   moveEmailToTrash(emailId, category)
   //     .then(() => {
   //       console.log(`✅ Письмо uid ${emailId} перемещено в "Корзина".`);
   //       toast.success("Письмо перемещено в корзину.");
-        
+
   //       setEmails((prevEmails) => ({
   //         ...prevEmails,
   //         messages: prevEmails.messages.filter((email) => email.uid !== emailId),
   //         totalMessages: prevEmails.totalMessages - 1,
   //         totalUnreadMessages: prevEmails.totalUnreadMessages - (prevEmails.messages.find(email => email.uid === emailId).isRead ? 0 : 1),
   //       }));
-  
+
   //     setSelectedEmail(null);
   //   })
   //   .catch((error) => console.error("❌ Ошибка при удалении письма:", error));
   // };
-  
+
   const handleDeleteEmail = (emailId) => {
     if (category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash') {
       deleteEmailForever(emailId)
@@ -141,7 +153,7 @@ export default function Main() {
         });
     }
   };
-  
+
   return (
     <main className="flex flex-row w-full h-screen bg-dark-600 overflow-hidden">
       <SideNav onSelectCategory={setCategory} />
@@ -157,7 +169,8 @@ export default function Main() {
               onCompose={handleCompose}
               drafts={drafts}
               selectedEmail={selectedEmail}
-              emails={emails} // Передаем список писем
+              emails={emails}
+              loadMoreEmails={loadMoreEmails} // ✅ Передаем функцию загрузки
             />
           </div>
 

@@ -13,9 +13,9 @@ export default function EmailList({
   loadMoreEmails,
 }) {
   const { totalMessages, totalUnreadMessages, messages } = emails;
-
   const containerRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastLoadedUid, setLastLoadedUid] = useState(null);
 
   const handleScroll = () => {
     const container = containerRef.current;
@@ -25,10 +25,12 @@ export default function EmailList({
       !isLoading
     ) {
       if (messages && messages.length > 0) {
-        setIsLoading(true);
-        loadMoreEmails(messages[messages.length - 1].uid).finally(() =>
-          setIsLoading(false)
-        );
+        const oldestUid = messages[messages.length - 1].uid;
+        if (oldestUid !== lastLoadedUid) { // ✅ Проверяем, загружен ли уже этот UID
+          setIsLoading(true);
+          setLastLoadedUid(oldestUid);
+          loadMoreEmails(oldestUid).finally(() => setIsLoading(false));
+        }
       }
     }
   };
