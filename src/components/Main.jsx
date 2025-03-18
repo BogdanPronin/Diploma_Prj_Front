@@ -14,15 +14,17 @@ export default function Main() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
   const [category, setCategory] = useState("INBOX");
-  const [emails, setEmails] = useState([]); // Список писем
+  const [emails, setEmails] = useState({ totalMessages: 0, totalUnreadMessages: 0, messages: [] }); // Изначально пустой список
   const [drafts, setDrafts] = useState([]); // Список черновиков
   const [currentDraft, setCurrentDraft] = useState(null); // Текущий черновик
   const [unreadUids, setUnreadUids] = useState(new Set());
-
-
+  
   // Загружаем письма при смене категории
   useEffect(() => {
     console.log(`📩 Запрос писем для категории: ${category}`);
+    // Сбрасываем письма при смене категории
+    setEmails({ totalMessages: 0, totalUnreadMessages: 0, messages: [] });
+
     fetchEmails(category).then((data) => {
       console.log(`✅ Письма загружены: `, data);
       setEmails(data);
@@ -84,43 +86,11 @@ export default function Main() {
   // Функция выбора письма (если черновик — открываем редактор)
   const handleSelectEmail = (email) => {
     setSelectedEmail(email);
-
+  
     if (!email.isRead) {
       setUnreadUids((prev) => new Set(prev).add(email.uid));
     }
   };
-
-  const loadMoreEmails = async (beforeUid) => {
-    try {
-      const data = await fetchEmails(category, beforeUid);
-      setEmails((prevEmails) => ({
-        ...prevEmails,
-        messages: [...prevEmails.messages, ...data.messages],
-      }));
-    } catch (error) {
-      console.error("❌ Ошибка при загрузке дополнительных писем:", error);
-    }
-  };
-
-  // const handleDeleteEmail = (emailId) => {
-  //   console.log(`🗑 Удаление письма uid: ${emailId}...`);
-
-  //   moveEmailToTrash(emailId, category)
-  //     .then(() => {
-  //       console.log(`✅ Письмо uid ${emailId} перемещено в "Корзина".`);
-  //       toast.success("Письмо перемещено в корзину.");
-
-  //       setEmails((prevEmails) => ({
-  //         ...prevEmails,
-  //         messages: prevEmails.messages.filter((email) => email.uid !== emailId),
-  //         totalMessages: prevEmails.totalMessages - 1,
-  //         totalUnreadMessages: prevEmails.totalUnreadMessages - (prevEmails.messages.find(email => email.uid === emailId).isRead ? 0 : 1),
-  //       }));
-
-  //     setSelectedEmail(null);
-  //   })
-  //   .catch((error) => console.error("❌ Ошибка при удалении письма:", error));
-  // };
 
   const handleDeleteEmail = (emailId) => {
     if (category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash') {
@@ -153,7 +123,7 @@ export default function Main() {
         });
     }
   };
-
+  
   return (
     <main className="flex flex-row w-full h-screen bg-dark-600 overflow-hidden">
       <SideNav onSelectCategory={setCategory} />
@@ -161,7 +131,6 @@ export default function Main() {
         <ContentHeader />
 
         <div className="flex flex-row flex-grow h-[calc(100%-64px)] overflow-hidden">
-
           <div className="w-[35%] h-full overflow-hidden">
             <EmailList
               onSelectEmail={handleSelectEmail}
@@ -169,8 +138,17 @@ export default function Main() {
               onCompose={handleCompose}
               drafts={drafts}
               selectedEmail={selectedEmail}
-              emails={emails}
-              loadMoreEmails={loadMoreEmails} // ✅ Передаем функцию загрузки
+              emails={emails} // Передаем список писем
+              loadMoreEmails={(beforeUid) => {
+                fetchEmails(category, beforeUid).then((data) => {
+                  setEmails(prevEmails => ({
+                    ...prevEmails,
+                    messages: [...prevEmails.messages, ...data.messages],
+                  }));
+                }).catch((error) => {
+                  console.error("❌ Ошибка при загрузке дополнительных писем:", error);
+                });
+              }}
             />
           </div>
 
@@ -194,7 +172,6 @@ export default function Main() {
                 setDraft={setCurrentDraft}
                 onClose={() => setIsComposing(false)}
               />
-
             ) : selectedEmail ? (
               <EmailDetails
                 email={selectedEmail}
@@ -208,10 +185,7 @@ export default function Main() {
             )}
           </div>
         </div>
-
       </div>
-
-
     </main>
   );
 }
