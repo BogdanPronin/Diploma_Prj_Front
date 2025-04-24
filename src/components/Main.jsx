@@ -175,6 +175,7 @@ export default function Main() {
             ) : selectedEmail ? (
               <EmailDetails
                 email={selectedEmail}
+                category={category}
                 setSelectedEmail={setSelectedEmail}
                 onEmailDeleted={handleDeleteEmail} // Передаем функцию удаления
               />

@@ -7,8 +7,7 @@ function App() {
 
   return (
     <div className="App">
-      {/* {isAuthenticated ? <MainLayout /> : <AuthPage onLogin={() => setIsAuthenticated(true)} />} */}
-        <MainLayout />
+      {isAuthenticated ? <MainLayout /> : <AuthPage onLogin={() => setIsAuthenticated(true)} />}
     </div>
   );
 }

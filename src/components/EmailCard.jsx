@@ -1,7 +1,7 @@
 import { faPaperclip, faCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./EmailCard.css";
-import { formatEmailDate, parseSender } from "./utils";
+import { formatEmailDate } from "./utils";
 
 export default function EmailCard(props) {
   const { image, from, date, subject, body, attachments, isSelected, onClick, isRead } = props;
@@ -9,8 +9,9 @@ export default function EmailCard(props) {
   // Форматируем дату перед отображением
   const formattedDate = date ? formatEmailDate(date) : "-";
 
-  // Парсим отправителя
-  const { name, email } = parseSender(from.text || "");
+  // Используем name и address напрямую из from
+  const name = from?.name || "Неизвестный отправитель";
+  const email = from?.address || "";
 
   // Определяем, есть ли вложения
   const hasAttachment = attachments && attachments.length > 0;
@@ -39,8 +40,6 @@ export default function EmailCard(props) {
         <div className="flex items-center">
           <span className="text-xs font-medium mr-auto">{name}</span>
 
-
-
           <div className="flex items-center space-x-2">
             {!isRead && (
               <FontAwesomeIcon
@@ -57,8 +56,8 @@ export default function EmailCard(props) {
             </span>
           </div>
         </div>
-        <span className="text-sm font-medium mt-2 ">{subject || "<None Subject>"}</span>
-        <span className="clamp text-xs font-normal mt-4 w-full ">{body}</span>
+        <span className="text-sm font-medium mt-2">{subject || "<No Subject>"}</span>
+        <span className="clamp text-xs font-normal mt-4 w-full">{body}</span>
       </div>
     </div>
   );

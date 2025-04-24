@@ -6,10 +6,10 @@ export default function SideNav({ onSelectCategory }) {
 
   const navItems = [
     { id: "INBOX", name: "Входящие" },
-    { id: "Черновики", name: "Черновики" },
-    { id: "Отправленные", name: "Отправленные" },
-    { id: "Корзина", name: "Корзина" },
-    { id: "Archive", name: "Архив" },
+    { id: "DRAFTS", name: "Черновики" },
+    { id: "SENT", name: "Отправленные" },
+    { id: "TRASH", name: "Корзина" },
+    { id: "ARCHIVE", name: "Архив" },
   ];
 
   return (

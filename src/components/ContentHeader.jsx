@@ -7,6 +7,10 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function ContentHeader() {
+  const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+  const userName = authData.name || "Пользователь";
+  const userPicture = authData.picture || "";
+
   return (
     <div className="bg-dark-500 flex items-center py-6 px-10 mb-1">
       <FontAwesomeIcon
@@ -20,8 +24,16 @@ export default function ContentHeader() {
       <FontAwesomeIcon icon={faFolder} className="text-light-600 mx-2" />
       <FontAwesomeIcon icon={faBell} className="text-light-600 mx-2" />
       <FontAwesomeIcon icon={faEnvelope} className="text-light-600 mx-2" />
-      <div className="w-8 h-8 bg-green-200 rounded-xl ml-8 mr-4"></div>
-      <span className="font-light text-xs text-light-100">Бодюн Данилов</span>
+      {userPicture ? (
+        <img
+          src={userPicture}
+          alt="Profile"
+          className="w-8 h-8 rounded-xl ml-8 mr-4"
+        />
+      ) : (
+        <div className="w-8 h-8 bg-green-200 rounded-xl ml-8 mr-4"></div>
+      )}
+      <span className="font-light text-xs text-light-100">{userName}</span>
     </div>
   );
 }
