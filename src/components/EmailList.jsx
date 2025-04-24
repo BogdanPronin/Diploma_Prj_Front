@@ -1,3 +1,4 @@
+// src/components/EmailList.jsx
 import { useEffect, useRef, useState } from "react";
 import EmailCard from "./EmailCard";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -17,6 +18,11 @@ export default function EmailList({
   const [isLoading, setIsLoading] = useState(false);
   const [lastLoadedUid, setLastLoadedUid] = useState(null);
 
+  useEffect(() => {
+    console.log("EmailList: Category:", category); // Отладка
+    console.log("EmailList: Emails:", messages);
+  }, [category, messages]);
+
   const handleScroll = () => {
     const container = containerRef.current;
     if (
@@ -26,7 +32,7 @@ export default function EmailList({
     ) {
       if (messages && messages.length > 0) {
         const oldestUid = messages[messages.length - 1].uid;
-        if (oldestUid !== lastLoadedUid) { // ✅ Проверяем, загружен ли уже этот UID
+        if (oldestUid !== lastLoadedUid) {
           setIsLoading(true);
           setLastLoadedUid(oldestUid);
           loadMoreEmails(oldestUid).finally(() => setIsLoading(false));
@@ -65,6 +71,7 @@ export default function EmailList({
               {...email}
               isSelected={selectedEmail && email.uid === selectedEmail.uid}
               onClick={() => onSelectEmail(email)}
+              category={category} // Передаём category явно
             />
           ))
         ) : (

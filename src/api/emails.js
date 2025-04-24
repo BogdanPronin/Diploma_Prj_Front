@@ -1,4 +1,5 @@
 import { toast } from "react-toastify";
+import debounce from "lodash/debounce";
 
 // Утилита для получения authData
 const getAuthData = () => {
@@ -64,34 +65,44 @@ export const markEmailAsRead = async (uids) => {
   }
 };  
 
-export const sendEmail = async (email) => {
+export const sendEmail = async (emailData) => {
   try {
-    const formData = new FormData();
-    formData.append("to", email.to.trim());
-    formData.append("subject", email.subject.trim());
-    formData.append("html", email.body.trim());
+    const { accessToken, provider, email } = getAuthData();
 
-    if (email.attachments && email.attachments.length > 0) {
-      email.attachments.forEach((attachment) => {
-        console.log("📎 Прикрепляем файл:", attachment.name); // Отладка
+    const formData = new FormData();
+    formData.append("to", emailData.to.trim());
+    formData.append("subject", emailData.subject.trim());
+    formData.append("html", emailData.body.trim());
+    formData.append("providerName", provider);
+    formData.append("email", email); // Добавляем email из authData
+
+    if (emailData.attachments && emailData.attachments.length > 0) {
+      emailData.attachments.forEach((attachment) => {
+        console.log("📎 Attaching file:", attachment.name);
         formData.append("attachments", attachment.fileObj, attachment.name);
       });
     }
 
-    console.log("📩 Отправляем письмо:", Object.fromEntries(formData)); // Проверяем, что отправляется
+    console.log("📩 Sending email:", Object.fromEntries(formData));
 
-    const response = await fetch("http://localhost:3001/send", {
+    const response = await fetch("http://localhost:8080/api/mail/send", {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`Ошибка при отправке письма: ${await response.text()}`);
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to send email: ${response.statusText}`);
     }
 
+    toast.success("Email sent successfully!");
     return await response.json();
   } catch (error) {
-    console.error("❌ Ошибка при отправке письма:", error);
+    console.error("Error sending email:", error);
+    toast.error(error.message || "Failed to send email.");
     throw error;
   }
 };
@@ -166,24 +177,54 @@ export const markEmailsAsRead = async (uids) => {
   }
 };
 
-export const fetchEmailsFromSender = async (senderEmail) => {
+export const fetchEmailsFromSender = async (senderEmail, limit = 20) => {
   try {
-    const response = await fetch(`http://localhost:3001/emails-from-sender?sender=${senderEmail}`);
-    if (!response.ok) throw new Error("Ошибка при получении входящих писем");
-    return await response.json();
+    const { accessToken, provider, email } = getAuthData();
+    const response = await fetch(
+      `http://localhost:8080/api/mail/emails-from-sender?sender=${encodeURIComponent(senderEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch emails from sender");
+    }
+
+    const data = await response.json();
+    return data.messages || [];
   } catch (error) {
-    console.error("Ошибка при получении входящих писем:", error);
+    console.error("Error fetching emails from sender:", error);
+    toast.error(error.message || "Failed to fetch emails from sender");
     return [];
   }
 };
 
-export const fetchEmailsSentTo = async (recipientEmail) => {
+export const fetchEmailsSentTo = async (recipientEmail, limit = 20) => {
   try {
-    const response = await fetch(`http://localhost:3001/emails-sent-to?recipient=${recipientEmail}`);
-    if (!response.ok) throw new Error("Ошибка при получении отправленных писем");
-    return await response.json();
+    const { accessToken, provider, email } = getAuthData();
+    const response = await fetch(
+      `http://localhost:8080/api/mail/emails-sent-to?recipient=${encodeURIComponent(recipientEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch emails sent to recipient");
+    }
+
+    const data = await response.json();
+    return data.messages || [];
   } catch (error) {
-    console.error("Ошибка при получении отправленных писем:", error);
+    console.error("Error fetching emails sent to recipient:", error);
+    toast.error(error.message || "Failed to fetch emails sent to recipient");
     return [];
   }
 };

@@ -5,7 +5,7 @@ import {
   faTrashCan,
   faComments,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { formatFileSize, getFileIcon, parseSender, formatEmailDateFull } from "./utils";
 import { useState } from "react";
 import ChatView from "./ChatView";
@@ -14,6 +14,7 @@ import { downloadAttachment, moveEmailToTrash, deleteEmailForever } from "../api
 export default function EmailDetails({ email, category, onEmailDeleted }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
   if (!email) {
     console.log("EmailDetails: Нет выбранного письма");
     return (
@@ -23,9 +24,8 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
     );
   }
 
-
-
-  const handleDelete = async () => {
+  const handleDelete = async (e) => {
+    e.stopPropagation(); // Исправлено: stopPropogation → stopPropagation
     if (isDeleting) return;
     setIsDeleting(true);
 
@@ -35,7 +35,6 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
       } else {
         await moveEmailToTrash(email.uid, category);
       }
-
       onEmailDeleted?.(email.uid);
     } catch (error) {
       console.error("❌ Ошибка при удалении письма:", error);
@@ -44,9 +43,11 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
     }
   };
 
-
-  const name = email.from?.name || "Неизвестный отправитель";
-  const senderEmail = email.from?.address || "";
+  // Выбираем данные в зависимости от категории
+  const isSentFolder = category.toLowerCase() === "sent";
+  const recipient = isSentFolder && email.to && email.to.length > 0 ? email.to[0] : null;
+  const name = isSentFolder ? recipient?.name || recipient?.address || "Неизвестный получатель" : email.from?.name || "Неизвестный отправитель";
+  const senderEmail = isSentFolder ? recipient?.address || "" : email.from?.address || "";
 
   return (
     <div className="flex flex-col bg-dark-500 p-6 rounded-xl">
@@ -62,13 +63,19 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
             className="mx-2 text-light-200 cursor-pointer"
             onClick={() => setIsChatOpen(true)}
           />
-          <FontAwesomeIcon icon={faReply} className="mx-2 text-light-200 cursor-pointer" />
+          <FontAwesomeIcon
+            icon={faReply}
+            className="mx-2 text-light-200 cursor-pointer"
+          />
           <FontAwesomeIcon
             icon={faTrashCan}
             className="mx-2 text-light-200 cursor-pointer"
             onClick={handleDelete}
           />
-          <FontAwesomeIcon icon={faEllipsisH} className="mx-2 text-light-200 cursor-pointer" />
+          <FontAwesomeIcon
+            icon={faEllipsisH}
+            className="mx-2 text-light-200 cursor-pointer"
+          />
         </div>
       </div>
       <span className="text-xs text-light-600 font-bold mt-4">{formatEmailDateFull(email.date)}</span>
@@ -96,7 +103,10 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
                 className="flex items-center justify-between text-white p-2 border-b border-gray-600 last:border-0"
               >
                 <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={getFileIcon(file.mimeType)} className="text-gray-300 text-lg" />
+                  <FontAwesomeIcon
+                    icon={getFileIcon(file.mimeType)}
+                    className="text-gray-300 text-lg"
+                  />
                   <span>
                     {file.filename} ({formatFileSize(file.size)})
                   </span>

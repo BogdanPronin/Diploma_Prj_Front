@@ -1,22 +1,27 @@
+// src/components/EmailCard.jsx
 import { faPaperclip, faCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import "./EmailCard.css";
 import { formatEmailDate } from "./utils";
+import "./EmailCard.css";
 
 export default function EmailCard(props) {
-  const { image, from, date, subject, body, attachments, isSelected, onClick, isRead } = props;
+  const { image, from, to, date, subject, body, attachments, isSelected, onClick, isRead, category } = props;
+
+  console.log("EmailCard props:", { category, from, to }); // Отладка
 
   // Форматируем дату перед отображением
   const formattedDate = date ? formatEmailDate(date) : "-";
 
-  // Используем name и address напрямую из from
-  const name = from?.name || "Неизвестный отправитель";
-  const email = from?.address || "";
+  // Выбираем данные в зависимости от категории
+  const isSentFolder = category && category.toLowerCase() === "sent";
+  const recipient = isSentFolder && to && to.length > 0 ? to[0] : null;
+  const name = isSentFolder ? recipient?.name || recipient?.address || "Неизвестный получатель" : from?.name || from?.address || "Неизвестный отправитель";
+  const email = isSentFolder ? recipient?.address || "" : from?.address || "";
 
   // Определяем, есть ли вложения
   const hasAttachment = attachments && attachments.length > 0;
 
-  // Получаем первую букву имени отправителя
+  // Получаем первую букву имени
   const firstLetter = name.charAt(0).toUpperCase();
 
   // Получаем первую букву второго слова (если есть)
@@ -31,7 +36,9 @@ export default function EmailCard(props) {
       onClick={onClick}
     >
       {/* Квадрат с инициалами */}
-      <div className={`${image} relative w-12 h-10 mt-3 rounded-xl bg-blue-200 flex items-center justify-center text-white font-bold`}>
+      <div
+        className={`${image || "bg-blue-200"} relative w-12 h-10 mt-3 rounded-xl flex items-center justify-center text-white font-bold`}
+      >
         <span className="absolute top-1 left-1 text-xs">{firstLetter}</span>
         {secondLetter && <span className="absolute bottom-1 right-1 text-xs">{secondLetter}</span>}
       </div>
@@ -47,7 +54,6 @@ export default function EmailCard(props) {
                 className="text-xs text-blue-400"
               />
             )}
-            {/* 🔹 Показываем скрепку, если у письма есть вложения */}
             {hasAttachment && (
               <FontAwesomeIcon icon={faPaperclip} className="text-gray-400 text-sm mr-2" />
             )}

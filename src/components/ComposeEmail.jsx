@@ -1,9 +1,10 @@
+// src/components/ComposeEmail.jsx
 import { useState, useEffect, useMemo } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt, faTimes } from "@fortawesome/free-solid-svg-icons";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 
 // Функция для форматирования размера файла
 const formatFileSize = (size) => {
@@ -24,10 +25,11 @@ const getFileIcon = (type) => {
   return faFileAlt;
 };
 
-export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
+export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) {
   const [email, setEmail] = useState(
     draft || { uid: Date.now(), to: "", subject: "", body: "", attachments: [] }
   );
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     if (JSON.stringify(draft) !== JSON.stringify(email)) {
@@ -51,9 +53,17 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
       fileObj: file,
     }));
 
+    const newAttachments = [...(email.attachments || []), ...files];
+    const totalSize = newAttachments.reduce((sum, file) => sum + file.size, 0);
+
+    if (totalSize > 25 * 1024 * 1024) {
+      toast.error("Total attachment size exceeds 25MB");
+      return;
+    }
+
     setEmail((prev) => ({
       ...prev,
-      attachments: [...(prev.attachments || []), ...files],
+      attachments: newAttachments,
     }));
   };
 
@@ -64,14 +74,21 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
     }));
   };
 
-  const handleSend = () => {
-    if (email.to.trim() && email.subject.trim() && email.body.trim()) {
-      console.log("Email sent:", email);
-      onSendEmail(email);  // ⬅️ обязательно передаем объект email
-      toast.success("Письмо отправлено");
-      onClose()
-    } else {
-      alert("Заполните все поля перед отправкой!");
+  const handleSend = async () => {
+    if (!isValidForm) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await onSendEmail(email);
+      toast.success("Email sent successfully");
+      onClose();
+    } catch (error) {
+      toast.error(error.message || "Failed to send email");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -80,13 +97,34 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
     return email.attachments?.reduce((sum, file) => sum + file.size, 0) || 0;
   }, [email.attachments]);
 
+  // Проверка валидности формы
+  const isValidForm = useMemo(() => {
+    return (
+      email.to.trim() &&
+      email.subject.trim() &&
+      email.body.trim() &&
+      totalFileSize <= 25 * 1024 * 1024
+    );
+  }, [email.to, email.subject, email.body, totalFileSize]);
+
   const fileCount = email.attachments?.length || 0;
 
   return (
     <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4">
-      <input className="p-2 rounded" name="to" placeholder="To" value={email.to} onChange={handleChange} />
-      <input className="p-2 rounded" name="subject" placeholder="Subject" value={email.subject} onChange={handleChange} />
-
+      <input
+        className={`p-2 rounded ${!email.to.trim() ? "border-red-500 border-2" : ""}`}
+        name="to"
+        placeholder="To"
+        value={email.to}
+        onChange={handleChange}
+      />
+      <input
+        className={`p-2 rounded ${!email.subject.trim() ? "border-red-500 border-2" : ""}`}
+        name="subject"
+        placeholder="Subject"
+        value={email.subject}
+        onChange={handleChange}
+      />
 
       <ReactQuill
         value={email.body}
@@ -106,22 +144,25 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
         }}
         theme="snow"
         placeholder="Write your message..."
-        className="bg-white  h-96 pb-20"
+        className="bg-white h-96 pb-20"
       />
+
       {/* Форма загрузки файлов */}
       <div className="mt-4">
         <input
           type="file"
           multiple
-          onChange={handleFileUpload} // убедись, что имя обработчика совпадает
-          id="file-upload" // именно id, а не uid
+          onChange={handleFileUpload}
+          id="file-upload"
           className="hidden"
         />
-        <label htmlFor="file-upload" className="cursor-pointer bg-blue-200 text-white px-4 py-2 rounded-md">
+        <label
+          htmlFor="file-upload"
+          className="cursor-pointer bg-blue-200 text-white px-4 py-2 rounded-md"
+        >
           Attach Files
         </label>
       </div>
-
 
       {/* Отображение загруженных файлов */}
       {fileCount > 0 && (
@@ -131,10 +172,15 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
           </h3>
           <ul>
             {email.attachments.map((file, index) => (
-              <li key={index} className="flex items-center justify-between text-white p-2 border-b border-gray-600 last:border-0">
+              <li
+                key={index}
+                className="flex items-center justify-between text-white p-2 border-b border-gray-600 last:border-0"
+              >
                 <div className="flex items-center gap-3">
                   <FontAwesomeIcon icon={getFileIcon(file.type)} className="text-gray-300 text-lg" />
-                  <span>{file.name} ({formatFileSize(file.size)})</span>
+                  <span>
+                    {file.name} ({formatFileSize(file.size)})
+                  </span>
                 </div>
                 <button onClick={() => handleRemoveFile(index)} className="text-red-500">
                   <FontAwesomeIcon icon={faTimes} />
@@ -144,9 +190,21 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
           </ul>
         </div>
       )}
+
       <div className="flex justify-end gap-4">
-        <button className="bg-gray-500 p-2 rounded text-white" onClick={onClose}>Cancel</button>
-        <button className="bg-blue-200 p-2 rounded text-white" onClick={handleSend}>Send</button>
+        <button
+          className="bg-gray-500 p-2 rounded text-white"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
+        <button
+          className={`p-2 rounded text-white ${isValidForm && !isSending ? "bg-blue-200" : "bg-gray-400 cursor-not-allowed"}`}
+          onClick={handleSend}
+          disabled={!isValidForm || isSending}
+        >
+          {isSending ? "Sending..." : "Send"}
+        </button>
       </div>
     </div>
   );
