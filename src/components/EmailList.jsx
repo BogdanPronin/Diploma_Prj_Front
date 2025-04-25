@@ -4,6 +4,7 @@ import EmailCard from "./EmailCard";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./EmailList.css";
+import Loader from './ui/Loader';
 
 export default function EmailList({
   emails = { totalMessages: 0, totalUnreadMessages: 0, messages: [] },
@@ -12,6 +13,7 @@ export default function EmailList({
   onCompose,
   selectedEmail,
   loadMoreEmails,
+  unreadList
 }) {
   const { totalMessages, totalUnreadMessages, messages } = emails;
   const containerRef = useRef(null);
@@ -44,6 +46,7 @@ export default function EmailList({
   useEffect(() => {
     const container = containerRef.current;
     container.addEventListener("scroll", handleScroll);
+    console.log(unreadList);
     return () => container.removeEventListener("scroll", handleScroll);
   }, [messages, isLoading]);
 
@@ -72,6 +75,7 @@ export default function EmailList({
               isSelected={selectedEmail && email.uid === selectedEmail.uid}
               onClick={() => onSelectEmail(email)}
               category={category} // Передаём category явно
+              isRead={unreadList.has(email.uid)}
             />
           ))
         ) : (
@@ -81,7 +85,8 @@ export default function EmailList({
         )}
 
         {isLoading && (
-          <div className="text-center text-light-300 py-2">Загрузка...</div>
+          // <div className="text-center text-light-300 py-2">Загрузка...</div>
+          <Loader />
         )}
       </div>
     </div>

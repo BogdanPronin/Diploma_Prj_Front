@@ -1,8 +1,8 @@
 import React from "react";
 import { useState } from "react";
 
-export default function SideNav({ onSelectCategory }) {
-  const [activeTab, setActiveTab] = useState("INBOX");
+export default function SideNav({ selectCategory, onSelectCategory }) {
+  const [activeTab, setActiveTab] = useState(selectCategory);
 
   const navItems = [
     { id: "INBOX", name: "Входящие" },

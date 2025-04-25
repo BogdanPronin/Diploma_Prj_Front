@@ -93,36 +93,20 @@ export default function Main() {
   };
 
   const handleDeleteEmail = (emailId) => {
-    if (category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash') {
-      deleteEmailForever(emailId)
-        .then(() => {
-          setEmails(prev => ({
-            ...prev,
-            messages: prev.messages.filter(email => email.uid !== emailId)
-          }));
-          setSelectedEmail(null);
-          toast.success("Письмо удалено навсегда");
-        })
-        .catch((error) => {
-          console.error(error);
-          toast.error("Ошибка при удалении письма");
-        });
-    } else {
-      moveEmailToTrash(emailId, category)
-        .then(() => {
-          setEmails(prev => ({
-            ...prev,
-            messages: prev.messages.filter(email => email.uid !== emailId)
-          }));
-          setSelectedEmail(null);
-          toast.success("Письмо перемещено в корзину");
-        })
-        .catch((error) => {
-          console.error(error);
-          toast.error("Ошибка при перемещении письма");
-        });
-    }
+    setEmails(prev => ({
+      ...prev,
+      messages: prev.messages.filter(email => email.uid !== emailId)
+    }));
+    setSelectedEmail(null);
+    toast.success(category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash'
+      ? "Письмо удалено навсегда"
+      : "Письмо перемещено в корзину");
   };
+
+  const handleError = (e, message) => {
+    console.error(e);
+    toast.error(message);
+  }
   
   return (
     <main className="flex flex-row w-full h-screen bg-dark-600 overflow-hidden">
@@ -178,6 +162,7 @@ export default function Main() {
                 category={category}
                 setSelectedEmail={setSelectedEmail}
                 onEmailDeleted={handleDeleteEmail} // Передаем функцию удаления
+                onError={handleError}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-light-200">

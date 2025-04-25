@@ -11,7 +11,7 @@ import { useState } from "react";
 import ChatView from "./ChatView";
 import { downloadAttachment, moveEmailToTrash, deleteEmailForever } from "../api/emails";
 
-export default function EmailDetails({ email, category, onEmailDeleted }) {
+export default function EmailDetails({ email, category, onEmailDeleted, onError }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -25,19 +25,18 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
   }
 
   const handleDelete = async (e) => {
-    e.stopPropagation(); // Исправлено: stopPropogation → stopPropagation
+    e.stopPropagation();
     if (isDeleting) return;
-    setIsDeleting(true);
 
+    setIsDeleting(true);
     try {
-      if (category.toLowerCase() === "trash") {
-        await deleteEmailForever(email.uid, category);
-      } else {
-        await moveEmailToTrash(email.uid, category);
-      }
+      const res = category.toLowerCase() === "trash"
+        ? await deleteEmailForever(email.uid, category)
+        : await moveEmailToTrash(email.uid, category);
       onEmailDeleted?.(email.uid);
     } catch (error) {
-      console.error("❌ Ошибка при удалении письма:", error);
+      console.error("❌ Ошибка при удалении письма:");
+      onError?.(error, "Ошибка при удалении письма");
     } finally {
       setIsDeleting(false);
     }
@@ -70,7 +69,7 @@ export default function EmailDetails({ email, category, onEmailDeleted }) {
           <FontAwesomeIcon
             icon={faTrashCan}
             className="mx-2 text-light-200 cursor-pointer"
-            onClick={handleDelete}
+            onClick={(e) => handleDelete(e)}
           />
           <FontAwesomeIcon
             icon={faEllipsisH}
