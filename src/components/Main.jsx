@@ -7,6 +7,7 @@ import SideNav from "./SideNav";
 import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToTrash, markEmailsAsRead } from "../api/emails"; // Подключаем API-функции
 import Modal from "react-modal";
 import { toast } from 'react-toastify';
+import Loader from './ui/Loader';
 
 Modal.setAppElement('#root'); // для accessibility
 
@@ -18,28 +19,35 @@ export default function Main() {
   const [drafts, setDrafts] = useState([]); // Список черновиков
   const [currentDraft, setCurrentDraft] = useState(null); // Текущий черновик
   const [unreadUids, setUnreadUids] = useState(new Set());
+  const [loading, setLoading] = useState(true);
   
   // Загружаем письма при смене категории
   useEffect(() => {
+    setLoading(true);
     console.log(`📩 Запрос писем для категории: ${category}`);
     // Сбрасываем письма при смене категории
     setEmails({ totalMessages: 0, totalUnreadMessages: 0, messages: [] });
 
-    fetchEmails(category).then((data) => {
+    fetchEmails(category)
+      .then((data) => {
       console.log(`✅ Письма загружены: `, data);
       setEmails(data);
-    });
+    })
+      .finally(() => setLoading(false));
   }, [category]);
 
   // Отметка писем как прочитанных перед закрытием страницы
   useEffect(() => {
-    const markAsReadOnUnload = async () => {
+    const markAsReadOnUnload = async (e) => {
       if (unreadUids.size > 0) {
         try {
-          await markEmailsAsRead(Array.from(unreadUids));
+          let res = await markEmailsAsRead(unreadUids);
           console.log("✅ Все открытые письма помечены как прочитанные.");
         } catch (error) {
           console.error("❌ Ошибка при отметке писем как прочитанных:", error);
+          handleError(error, "Ошибка при отметке писем");
+        } finally {
+          console.log(unreadUids);
         }
       }
     };
@@ -56,11 +64,12 @@ export default function Main() {
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("beforeunload", markAsReadOnUnload);
 
     return () => {
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pagehide", handlePageHide);
-      markAsReadOnUnload(); // Обрабатываем размонтирование компонента
+      window.removeEventListener("beforeunload", markAsReadOnUnload);
     };
   }, [unreadUids]);
 
@@ -109,11 +118,11 @@ export default function Main() {
   }
   
   return (
-    <main className="flex flex-row w-full h-screen bg-dark-600 overflow-hidden">
-      <SideNav onSelectCategory={setCategory} />
+    <main className="flex flex-row overflow-hidden w-full h-screen bg-dark-600">
+      <SideNav selectCategory={category} onSelectCategory={setCategory} />
       <div className="flex flex-col flex-grow">
-        <ContentHeader />
-
+      <ContentHeader/>  
+      {loading ? <Loader /> : (
         <div className="flex flex-row flex-grow h-[calc(100%-64px)] overflow-hidden">
           <div className="w-[35%] h-full overflow-hidden">
             <EmailList
@@ -122,6 +131,7 @@ export default function Main() {
               onCompose={handleCompose}
               drafts={drafts}
               selectedEmail={selectedEmail}
+              unreadList={unreadUids}
               emails={emails} // Передаем список писем
               loadMoreEmails={(beforeUid) => {
                 fetchEmails(category, beforeUid).then((data) => {
@@ -171,6 +181,7 @@ export default function Main() {
             )}
           </div>
         </div>
+      )}
       </div>
     </main>
   );

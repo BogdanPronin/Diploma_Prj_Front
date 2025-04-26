@@ -2,22 +2,31 @@ import { toast } from "react-toastify";
 import debounce from "lodash/debounce";
 
 // Утилита для получения authData
-const getAuthData = () => {
-  const authData = JSON.parse(localStorage.getItem("authData") || "{}");
-  if (!authData.accessToken || !authData.provider || !authData.email) {
+export const getAuthData = () => {
+  const activeAccountEmail = JSON.parse(localStorage.getItem("activeAccount") || "null");
+  const accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
+
+  if (!activeAccountEmail || !accounts[activeAccountEmail]) {
     throw new Error("Authentication data is missing");
   }
-  return authData;
+
+  const account = accounts[activeAccountEmail];
+  return {
+    accessToken: account.accessToken,
+    provider: account.provider,
+    email: activeAccountEmail,
+    name: account.name,
+    picture: account.picture,
+  };
 };
 
 export const fetchEmails = async (category = "INBOX", beforeUid) => {
   try {
-    const authData = JSON.parse(localStorage.getItem("authData") || "{}");
+    const authData = getAuthData();
     const accessToken = authData.accessToken;
     const provider = authData.provider;
     const email = authData.email;
 
-    // Формируем URL без accessToken в query
     const baseUrl = `http://localhost:8080/api/mail/receive`;
     const queryParams = new URLSearchParams({
       category,
@@ -31,7 +40,7 @@ export const fetchEmails = async (category = "INBOX", beforeUid) => {
 
     const response = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${accessToken}`, // Передаём токен в заголовке
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -43,6 +52,61 @@ export const fetchEmails = async (category = "INBOX", beforeUid) => {
   }
 };
 
+export const login = async (email, password) => {
+  const url = "http://localhost:8081/api/auth/login";
+  const credentials = btoa(`${email}:${password}`);
+  const headers = {
+    "Authorization": `Basic ${credentials}`,
+    "Content-Type": "application/json",
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Ошибка авторизации: ${response.status}`);
+  }
+
+  const result = await response.json();
+  return {
+    accessToken: password,
+    name: result.name,
+  };
+};
+
+export const register = async (email, password, name) => {
+  const url = "http://localhost:8081/api/auth/register";
+
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  const body = JSON.stringify({
+    email: email,
+    password: password,
+    name: name,
+  });
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: headers,
+    body: body,  // Передаем объект как JSON в теле запроса
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || `Ошибка регистрации: ${response.status}`);
+  }
+
+  const result = await response.json();
+  return {
+    accessToken: password,  // Если токен приходит в ответе
+    name: name,
+  };
+};
 
 export const markEmailAsRead = async (uids) => {
   try {
@@ -98,7 +162,7 @@ export const sendEmail = async (emailData) => {
       throw new Error(errorData.message || `Failed to send email: ${response.statusText}`);
     }
 
-    toast.success("Email sent successfully!");
+    toast.success("Письмо успешно отправлено!");
     return await response.json();
   } catch (error) {
     console.error("Error sending email:", error);
@@ -173,7 +237,7 @@ export const markEmailsAsRead = async (uids) => {
     return await response.json();
   } catch (error) {
     console.error("❌ Ошибка при пометке писем:", error);
-    throw error;
+    
   }
 };
 

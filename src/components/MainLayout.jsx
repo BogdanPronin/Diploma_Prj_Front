@@ -4,7 +4,6 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function MainLayout() {
-  console.log("MainLayout рендерится");
   return (
     <div className="h-screen flex h-[90vh] bg-blue-200">
       <Main />

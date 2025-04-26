@@ -68,7 +68,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
     if (email.to.trim() && email.subject.trim() && email.body.trim()) {
       console.log("Email sent:", email);
       onSendEmail(email);  // ⬅️ обязательно передаем объект email
-      toast.success("Письмо отправлено");
+      toast.success("Отправка...");
       onClose()
     } else {
       alert("Заполните все поля перед отправкой!");
