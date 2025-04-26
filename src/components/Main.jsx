@@ -4,7 +4,7 @@ import EmailDetails from "./EmailDetails";
 import EmailList from "./EmailList";
 import ComposeEmail from "./ComposeEmail";
 import SideNav from "./SideNav";
-import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToTrash, markEmailsAsRead } from "../api/emails"; // Подключаем API-функции
+import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToFolder, markEmailsAsRead } from "../api/emails"; // Подключаем API-функции
 import Modal from "react-modal";
 import { toast } from 'react-toastify';
 import Loader from './ui/Loader';
@@ -109,7 +109,7 @@ export default function Main() {
     setSelectedEmail(null);
     toast.success(category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash'
       ? "Письмо удалено навсегда"
-      : "Письмо перемещено в корзину");
+      : "Письмо перемещено");
   };
 
   const handleError = (e, message) => {

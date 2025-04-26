@@ -171,11 +171,11 @@ export const sendEmail = async (emailData) => {
   }
 };
 
-export const moveEmailToTrash = async (uid, sourceFolder) => {
+export const moveEmailToFolder = async (uid, sourceFolder, toFolder) => {
   try {
     const { accessToken, provider, email } = getAuthData();
 
-    const response = await fetch("http://localhost:8080/api/mail/move-to-trash", {
+    const response = await fetch("http://localhost:8080/api/mail/move-to-folder", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -186,6 +186,7 @@ export const moveEmailToTrash = async (uid, sourceFolder) => {
         email,
         uid,
         sourceFolder,
+        toFolder,
       }),
     });
 
@@ -198,8 +199,8 @@ export const moveEmailToTrash = async (uid, sourceFolder) => {
     toast.success(result);
     return result;
   } catch (error) {
-    console.error("Error moving email to trash:", error);
-    toast.error("Failed to move email to trash.");
+    console.error(`Error moving email to :${toFolder}`, error);
+    toast.error(`Ошибка пермещения письма в папку ${toFolder}`);
     throw error;
   }
 };
@@ -208,14 +209,36 @@ export const moveEmailToTrash = async (uid, sourceFolder) => {
 
 
 export const deleteEmailForever = async (uid, currentFolder) => {
-  const response = await fetch("http://localhost:3001/delete-forever", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uid, currentFolder }),
-  });
+  try {
+    const { accessToken, provider, email } = getAuthData();
 
-  if (!response.ok) throw new Error("Ошибка при окончательном удалении письма");
-  return await response.json();
+    const response = await fetch("http://localhost:8080/api/mail/delete-forever", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        providerName: provider,
+        email,
+        uid,
+        folderName: currentFolder,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to delete email: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    toast.success(result);
+    return result;
+  } catch (error) {
+    console.error(`Error delete email`, error);
+    toast.error(`Ошибка удаления письма`);
+    throw error;
+  }
 };
 
 export const markEmailsAsRead = async (uids) => {
@@ -293,22 +316,45 @@ export const fetchEmailsSentTo = async (recipientEmail, limit = 20) => {
   }
 };
 
-export const downloadAttachment = async (uid, filename) => {
+export const downloadAttachment = async (uid, filename, folder) => {
   try {
-    const response = await fetch(`http://localhost:3001/download-attachment?uid=${uid}&filename=${filename}`);
-    if (!response.ok) throw new Error("Ошибка при скачивании файла");
+    const { accessToken, provider, email } = getAuthData();
+
+    const response = await fetch("http://localhost:8080/api/mail/download-attachment", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        uid,
+        filename,
+        folder,
+        email,
+        providerName: provider,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to download attachment: ${response.statusText}`);
+    }
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     window.URL.revokeObjectURL(url);
+
+    toast.success("Вложение успешно скачано");
   } catch (error) {
-    console.error("Ошибка при скачивании файла:", error);
+    console.error(`Error downloading attachment:`, error);
+    toast.error(`Ошибка при скачивании вложения: ${error.message}`);
+    throw error;
   }
 };
 

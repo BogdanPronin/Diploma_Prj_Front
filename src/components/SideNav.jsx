@@ -9,7 +9,7 @@ export default function SideNav({ selectCategory, onSelectCategory }) {
     { id: "DRAFTS", name: "Черновики" },
     { id: "SENT", name: "Отправленные" },
     { id: "TRASH", name: "Корзина" },
-    { id: "ARCHIVE", name: "Архив" },
+    { id: "SPAM", name: "Спам" },
   ];
 
   return (
