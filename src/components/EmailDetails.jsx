@@ -90,7 +90,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
     <div className="flex flex-col bg-dark-500 p-6 rounded-xl h-full overflow-hidden">
       <div className="h-full overflow-y-auto">
         {/* Зафиксированная верхняя часть */}
-        <div className="sticky top-0 bg-dark-500 z-10 pb-4">
+        <div className="sticky top-0 bg-dark-500 z-10">
           <div className="flex items-center">
             <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
             <div className="flex flex-col">
@@ -134,7 +134,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
             </div>
           </div>
           <span className="text-xs text-light-600 font-bold mt-4 block">{formatEmailDateFull(email.date)}</span>
-          <span className="text-lg text-light-100 font-light mb-6 block">{email.subject}</span>
+          <span className="text-lg text-light-100 font-light mb-2 block">{email.subject}</span>
         </div>
 
         {/* Прокручиваемая часть: текст письма и вложения */}

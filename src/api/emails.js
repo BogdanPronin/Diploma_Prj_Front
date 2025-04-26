@@ -248,7 +248,7 @@ export const markEmailsAsRead = async (uids) => {
   }
 
   try {
-    const response = await fetch("http://localhost:3001/mark-read-batch", {
+    const response = await fetch("http://localhost:8080/mark-read-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uids }),

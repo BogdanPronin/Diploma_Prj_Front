@@ -83,7 +83,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
   const fileCount = email.attachments?.length || 0;
 
   return (
-    <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4">
+    <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4 overflow-y-auto h-full" >
       <input className="p-2 rounded" name="to" placeholder="To" value={email.to} onChange={handleChange} />
       <input className="p-2 rounded" name="subject" placeholder="Subject" value={email.subject} onChange={handleChange} />
 
