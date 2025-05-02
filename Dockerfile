@@ -1,19 +1,39 @@
-FROM node:20.19.1-alpine AS builder
-ENV HOME=/usr/src/app
-RUN mkdir -p $HOME
-WORKDIR $HOME
-COPY package.json package-lock.json $HOME
-RUN --mount=type=cache,target=$HOME/.npm \
-    npm set cache $HOME/.npm && \
+# syntax=docker/dockerfile:1.4
+# Включаем поддержку синтаксиса BuildKit для оптимизаций
+
+# Этап сборки
+FROM node:20-alpine AS builder
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы package.json и package-lock.json (или yarn.lock)
+COPY package*.json ./
+
+# Устанавливаем зависимости с использованием BuildKit mount для кэширования
+RUN --mount=type=cache,target=/root/.npm \
     npm ci
-COPY . $HOME
-RUN --mount=type=cache,target=$HOME/.npm \
-    npm set cache $HOME/.npm && \
-    npm run build
 
-FROM nginx:alpine
-COPY --from=builder /usr/src/app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
+# Копируем исходный код проекта
+COPY . .
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Собираем приложение
+RUN npm run build
+
+# Этап для production окружения
+FROM node:20-alpine AS production
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Устанавливаем глобально serve для раздачи статических файлов
+RUN npm install -g serve
+
+# Копируем собранные файлы из этапа сборки
+COPY --from=builder /app/build /app/build
+
+# Открываем порт для доступа к приложению
+EXPOSE 3001
+
+# Запускаем приложение
+CMD ["serve", "-s", "build", "-l", "3000"]
