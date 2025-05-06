@@ -2,32 +2,37 @@ import { useState, useEffect, useMemo } from "react";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { toast } from 'react-toastify';
+import { formatFileSize, getFileIcon } from '../utils/format';
+import Chips from 'react-chips';
 
-// Функция для форматирования размера файла
-const formatFileSize = (size) => {
-  return size < 1024
-    ? `${size} B`
-    : size < 1048576
-      ? `${(size / 1024).toFixed(1)} KB`
-      : `${(size / 1048576).toFixed(1)} MB`;
+// Функция для валидации email-адресов
+const validateEmails = (emails) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emails.every((email) => email.trim() === '' || emailRegex.test(email.trim()));
 };
 
-// Функция для определения иконки по MIME-типу
-const getFileIcon = (type) => {
-  if (!type) return faFileAlt;
-  if (type.includes("pdf")) return faFilePdf;
-  if (type.includes("image")) return faFileImage;
-  if (type.includes("word") || type.includes("msword") || type.includes("vnd.openxmlformats-officedocument.wordprocessingml.document")) return faFileWord;
-  if (type.includes("zip") || type.includes("rar")) return faFileArchive;
-  return faFileAlt;
+// Функция для нормализации строк в массивы
+const normalizeToArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim()) return value.split(',').map(email => email.trim());
+  return [];
 };
 
-export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
-  const [email, setEmail] = useState(
-    draft || { uid: Date.now(), to: "", subject: "", body: "", attachments: [] }
-  );
+export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) {
+  const [email, setEmail] = useState({
+    uid: draft?.uid || Date.now(),
+    to: normalizeToArray(draft?.to) || [],
+    cc: normalizeToArray(draft?.cc) || [],
+    bcc: normalizeToArray(draft?.bcc) || [],
+    subject: draft?.subject || "",
+    body: draft?.body || "",
+    attachments: draft?.attachments || [],
+    inReplyTo: draft?.inReplyTo || "",
+    references: draft?.references || ""
+  });
+  const [errors, setErrors] = useState({ to: "", cc: "", bcc: "" });
 
   useEffect(() => {
     if (JSON.stringify(draft) !== JSON.stringify(email)) {
@@ -35,8 +40,17 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
     }
   }, [email, draft, setDraft]);
 
-  const handleChange = (e) => {
-    setEmail((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChipChange = (name, chips) => {
+    const cleanedChips = chips
+      .map(chip => chip.trim())
+      .filter(chip => chip !== '');
+
+    if (!validateEmails(cleanedChips)) {
+      setErrors((prev) => ({ ...prev, [name]: "Некорректный email-адрес" }));
+    } else {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+    setEmail((prev) => ({ ...prev, [name]: cleanedChips }));
   };
 
   const handleEditorChange = (value) => {
@@ -65,17 +79,45 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
   };
 
   const handleSend = () => {
-    if (email.to.trim() && email.subject.trim() && email.body.trim()) {
-      console.log("Email sent:", email);
-      onSendEmail(email);  // ⬅️ обязательно передаем объект email
-      toast.success("Отправка...");
-      onClose()
-    } else {
-      alert("Заполните все поля перед отправкой!");
+    if (!email.to.length) {
+      setErrors((prev) => ({ ...prev, to: "Поле To обязательно" }));
+      return;
     }
+    if (!email.subject.trim()) {
+      toast.error("Поле Subject обязательно");
+      return;
+    }
+    if (!email.body.trim()) {
+      toast.error("Поле Body обязательно");
+      return;
+    }
+    if (!validateEmails(email.to)) {
+      setErrors((prev) => ({ ...prev, to: "Некорректный email-адрес в поле To" }));
+      return;
+    }
+    if (!validateEmails(email.cc)) {
+      setErrors((prev) => ({ ...prev, cc: "Некорректный email-адрес в поле CC" }));
+      return;
+    }
+    if (!validateEmails(email.bcc)) {
+      setErrors((prev) => ({ ...prev, bcc: "Некорректный email-адрес в поле BCC" }));
+      return;
+    }
+
+    const emailData = {
+      ...email,
+      to: email.to.join(','),
+      cc: email.cc.join(','),
+      bcc: email.bcc.join(','),
+      inReplyTo: email.inReplyTo,
+      references: email.references
+    };
+
+    onSendEmail(emailData);
+    toast.success("Отправка...");
+    onClose();
   };
 
-  // Вычисляем количество файлов и их суммарный размер
   const totalFileSize = useMemo(() => {
     return email.attachments?.reduce((sum, file) => sum + file.size, 0) || 0;
   }, [email.attachments]);
@@ -83,10 +125,47 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
   const fileCount = email.attachments?.length || 0;
 
   return (
-    <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4 overflow-y-auto h-full" >
-      <input className="p-2 rounded" name="to" placeholder="To" value={email.to} onChange={handleChange} />
-      <input className="p-2 rounded" name="subject" placeholder="Subject" value={email.subject} onChange={handleChange} />
-
+    <div className="bg-dark-500 p-6 rounded-xl flex flex-col gap-4 overflow-y-auto h-full">
+      <div>
+        <Chips
+          value={email.to}
+          onChange={(chips) => handleChipChange('to', chips)}
+          suggestions={[]}
+          placeholder="Кому (введите email и нажмите пробел)"
+          className={`p-2 rounded w-full ${errors.to ? 'border border-red-500' : 'border border-gray-300'}`}
+          createChipKeys={[32]}
+        />
+        {errors.to && <p className="text-red-500 text-sm">{errors.to}</p>}
+      </div>
+      <div>
+        <Chips
+          value={email.cc}
+          onChange={(chips) => handleChipChange('cc', chips)}
+          suggestions={[]}
+          placeholder="Копия (введите email и нажмите пробел)"
+          className={`p-2 rounded w-full ${errors.cc ? 'border border-red-500' : 'border border-gray-300'}`}
+          createChipKeys={[32]}
+        />
+        {errors.cc && <p className="text-red-500 text-sm">{errors.cc}</p>}
+      </div>
+      <div>
+        <Chips
+          value={email.bcc}
+          onChange={(chips) => handleChipChange('bcc', chips)}
+          suggestions={[]}
+          placeholder="Скрытая копия (введите email и нажмите пробел)"
+          className={`p-2 rounded w-full ${errors.bcc ? 'border border-red-500' : 'border border-gray-300'}`}
+          createChipKeys={[32]}
+        />
+        {errors.bcc && <p className="text-red-500 text-sm">{errors.bcc}</p>}
+      </div>
+      <input
+        className="p-2 rounded border border-gray-300"
+        name="subject"
+        placeholder="Тема"
+        value={email.subject}
+        onChange={(e) => setEmail((prev) => ({ ...prev, subject: e.target.value }))}
+      />
 
       <ReactQuill
         value={email.body}
@@ -105,29 +184,27 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
           ],
         }}
         theme="snow"
-        placeholder="Write your message..."
-        className="bg-white  h-96 pb-20"
+        placeholder="Напишите ваше сообщение..."
+        className="bg-white h-96 pb-20"
       />
-      {/* Форма загрузки файлов */}
+
       <div className="mt-4">
         <input
           type="file"
           multiple
-          onChange={handleFileUpload} // убедись, что имя обработчика совпадает
-          id="file-upload" // именно id, а не uid
+          onChange={handleFileUpload}
+          id="file-upload"
           className="hidden"
         />
         <label htmlFor="file-upload" className="cursor-pointer bg-blue-200 text-white px-4 py-2 rounded-md">
-          Attach Files
+          Прикрепить файлы
         </label>
       </div>
 
-
-      {/* Отображение загруженных файлов */}
       {fileCount > 0 && (
         <div className="mt-2 bg-dark-400 p-2 rounded-lg">
           <h3 className="text-light-300 mb-2">
-            Attachments ({fileCount} files, {formatFileSize(totalFileSize)}):
+            Вложения ({fileCount} файлов, {formatFileSize(totalFileSize)}):
           </h3>
           <ul>
             {email.attachments.map((file, index) => (
@@ -145,8 +222,12 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose}) {
         </div>
       )}
       <div className="flex justify-end gap-4">
-        <button className="bg-gray-500 p-2 rounded text-white" onClick={onClose}>Cancel</button>
-        <button className="bg-blue-200 p-2 rounded text-white" onClick={handleSend}>Send</button>
+        <button className="bg-gray-500 p-2 rounded text-white" onClick={onClose}>
+          Отмена
+        </button>
+        <button className="bg-blue-200 p-2 rounded text-white" onClick={handleSend}>
+          Отправить
+        </button>
       </div>
     </div>
   );

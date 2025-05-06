@@ -1,3 +1,5 @@
+import { faFilePdf, faFileImage, faFileWord, faFileArchive, faFileAlt } from "@fortawesome/free-solid-svg-icons";
+
 export function formatEmailDate(dateString) {
     const emailDate = new Date(dateString);
     const now = new Date();
@@ -15,4 +17,12 @@ export function formatEmailDate(dateString) {
       ? `${(size / 1024).toFixed(1)} KB`
       : `${(size / 1048576).toFixed(1)} MB`;
   }
+export const getFileIcon = (type) => {
+  if (!type) return faFileAlt;
+  if (type.includes("pdf")) return faFilePdf;
+  if (type.includes("image")) return faFileImage;
+  if (type.includes("word") || type.includes("msword") || type.includes("vnd.openxmlformats-officedocument.wordprocessingml.document")) return faFileWord;
+  if (type.includes("zip") || type.includes("rar")) return faFileArchive;
+  return faFileAlt;
+};
   

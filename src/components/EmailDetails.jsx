@@ -1,4 +1,3 @@
-// src/components/EmailDetails.jsx
 import { useState, useEffect, useRef } from "react";
 import {
   faEllipsisH,
@@ -11,7 +10,23 @@ import { formatFileSize, getFileIcon, parseSender, formatEmailDateFull } from ".
 import ChatView from "./ChatView";
 import { downloadAttachment, moveEmailToFolder, deleteEmailForever } from "../api/emails";
 
-export default function EmailDetails({ email, category, onEmailDeleted, onError }) {
+// Функция форматирования получателя
+const formatRecipient = (recipient) => {
+  if (!recipient) return "Неизвестный получатель";
+  const name = recipient.name && recipient.name.trim() ? recipient.name : null;
+  const address = recipient.address || "";
+  return address;
+};
+
+// Функция форматирования списка получателей
+const formatRecipientList = (recipients) => {
+  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+    return "Нет получателей";
+  }
+  return recipients.map(formatRecipient).join(", ");
+};
+
+export default function EmailDetails({ email, category, onEmailDeleted, onError, onReply }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -81,10 +96,32 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
     }
   };
 
+  const handleReply = (e) => {
+    e.stopPropagation();
+    if (!email.from?.address) {
+      onError?.(new Error("Нет отправителя для ответа"), "Ошибка при создании ответа");
+      return;
+    }
+
+    // Формируем черновик для ответа
+    const draft = {
+      uid: Date.now(),
+      to: [email.from.address], // Отправитель оригинального письма
+      cc: [],
+      bcc: [],
+      subject: `Re: ${email.subject || ""}`,
+      body: `<br/><br/><p>------ Исходное сообщение ------</p><p>От: ${formatRecipient(email.from)}</p><p>Дата: ${formatEmailDateFull(email.date)}</p><p>Тема: ${email.subject || ""}</p><p>${email.html || email.text || ""}</p>`,
+      attachments: [],
+      inReplyTo: email.messageId || "", // Для цепочки
+      references: email.references ? `${email.references} ${email.messageId || ""}` : (email.messageId || "") // Для цепочки
+    };
+
+    onReply?.(draft);
+  };
+
   const isSentFolder = category.toLowerCase() === "sent";
-  const recipient = isSentFolder && email.to && email.to.length > 0 ? email.to[0] : null;
-  const name = isSentFolder ? recipient?.name || recipient?.address || "Неизвестный получатель" : email.from?.name || "Неизвестный отправитель";
-  const senderEmail = isSentFolder ? recipient?.address || "" : email.from?.address || "";
+  const sender = isSentFolder ? { name: email.from?.name, address: email.from?.address } : email.from;
+  const senderDisplay = formatRecipient(sender);
 
   return (
     <div className="flex flex-col bg-dark-500 p-6 rounded-xl h-full overflow-hidden">
@@ -93,24 +130,45 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
         <div className="top-0 bg-dark-500">
           <div className="flex items-center">
             <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
-            <div className="flex flex-col">
-              <span className="text-sm text-light-200 font-medium">{name}</span>
-              <span className="text-xs text-light-400">{senderEmail}</span>
+            <div className="flex flex-col flex-grow">
+              <span className="text-sm text-light-200 font-medium">{senderDisplay}</span>
+              <div className="text-xs text-light-400 mt-1">
+                <div>
+                  <span className="font-medium">Кому: </span>
+                  {formatRecipientList(email.to)}
+                </div>
+                {email.cc && email.cc.length > 0 && (
+                  <div>
+                    <span className="font-medium">Копия: </span>
+                    {formatRecipientList(email.cc)}
+                  </div>
+                )}
+                {email.bcc && email.bcc.length > 0 && (
+                  <div>
+                    <span className="font-medium">Скрытая копия: </span>
+                    {formatRecipientList(email.bcc)}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex ml-auto relative" ref={menuRef}>
               <FontAwesomeIcon
                 icon={faComments}
                 className="mx-2 text-light-200 cursor-pointer"
                 onClick={() => setIsChatOpen(true)}
+                title="Чат"
               />
               <FontAwesomeIcon
                 icon={faReply}
-                className="mx-2 text-light-200 cursor-pointer"
+                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                onClick={handleReply}
+                title="Ответить"
               />
               <FontAwesomeIcon
                 icon={faTrashCan}
                 className="mx-2 text-light-200 cursor-pointer"
                 onClick={(e) => handleDelete(e)}
+                title="Удалить"
               />
               <FontAwesomeIcon
                 icon={faEllipsisH}
@@ -119,6 +177,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);
                 }}
+                title="Дополнительно"
               />
               {isMenuOpen && (
                 <div className="absolute right-0 top-8 mt-2 w-48 bg-dark-300 rounded-lg shadow-lg z-10">
@@ -148,7 +207,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
               border: "none",
               backgroundColor: "white",
             }}
-            title="Email Content"
+            title="Содержимое письма"
           />
 
           {email.attachments && email.attachments.length > 0 && (
@@ -186,7 +245,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError 
       <ChatView
         isOpen={isChatOpen}
         onRequestClose={() => setIsChatOpen(false)}
-        senderEmail={senderEmail}
+        senderEmail={sender?.address || ""}
       />
     </div>
   );
