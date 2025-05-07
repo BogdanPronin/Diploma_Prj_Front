@@ -4,12 +4,12 @@ import EmailDetails from "./EmailDetails";
 import EmailList from "./EmailList";
 import ComposeEmail from "./ComposeEmail";
 import SideNav from "./SideNav";
-import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToFolder, markEmailsAsRead } from "../api/emails";
+import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToFolder, markEmailsAsRead, deleteDraft } from "../api/emails";
 import Modal from "react-modal";
 import { toast } from 'react-toastify';
 import Loader from './ui/Loader';
 
-Modal.setAppElement('#root'); // для accessibility
+Modal.setAppElement('#root');
 
 export default function Main() {
   const [selectedEmail, setSelectedEmail] = useState(null);
@@ -21,7 +21,6 @@ export default function Main() {
   const [unreadUids, setUnreadUids] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Загружаем письма при смене категории
   useEffect(() => {
     setLoading(true);
     console.log(`📩 Запрос писем для категории: ${category}`);
@@ -35,12 +34,11 @@ export default function Main() {
       .finally(() => setLoading(false));
   }, [category]);
 
-  // Отметка писем как прочитанных перед закрытием страницы
   useEffect(() => {
     const markAsReadOnUnload = async () => {
       if (unreadUids.size > 0) {
         try {
-          await markEmailsAsRead(unreadUids);
+          await markEmailsAsRead([...unreadUids]);
           console.log("✅ Все открытые письма помечены как прочитанные.");
         } catch (error) {
           console.error("❌ Ошибка при отметке писем как прочитанных:", error);
@@ -70,67 +68,83 @@ export default function Main() {
     };
   }, [unreadUids]);
 
-  // Проверка, является ли черновик непустым
   const isDraftNotEmpty = (draft) => {
     return draft && (
       (Array.isArray(draft.to) && draft.to.length > 0) ||
       draft.subject?.trim() ||
-      draft.body?.trim()
+      draft.body?.trim() ||
+      (Array.isArray(draft.attachments) && draft.attachments.length > 0)
     );
   };
 
-  // Функция начала нового письма
-  const handleCompose = () => {
+  const handleCompose = (draft) => {
     if (isDraftNotEmpty(currentDraft)) {
       setDrafts((prevDrafts) =>
-        prevDrafts.some((d) => d.uid === currentDraft.uid)
-          ? prevDrafts.map((d) => (d.uid === currentDraft.uid ? currentDraft : d))
-          : [...prevDrafts, { ...currentDraft, uid: Date.now() }]
-      );
-    }
-    setSelectedEmail(null);
-    setIsComposing(true);
-    setCurrentDraft({ uid: Date.now(), to: [], subject: "", body: "", cc: [], bcc: [], attachments: [] });
-  };
-
-  // Функция выбора письма
-  const handleSelectEmail = (email) => {
-    setSelectedEmail(email);
-    if (!email.isRead) {
-      setUnreadUids((prev) => new Set(prev).add(email.uid));
-    }
-  };
-
-  // Функция удаления письма
-  const handleDeleteEmail = (emailId) => {
-    setEmails(prev => ({
-      ...prev,
-      messages: prev.messages.filter(email => email.uid !== emailId)
-    }));
-    setSelectedEmail(null);
-    toast.success(category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash'
-      ? "Письмо удалено навсегда"
-      : "Письмо перемещено");
-  };
-
-  // Функция обработки ошибок
-  const handleError = (e, message) => {
-    console.error(e);
-    toast.error(message);
-  };
-
-  // Функция обработки ответа
-  const handleReply = (draft) => {
-    if (isDraftNotEmpty(currentDraft)) {
-      setDrafts((prevDrafts) =>
-        prevDrafts.some((d) => d.uid === currentDraft.uid)
+        prevDrafts.some((d) => d.uid === currentDraft?.uid)
           ? prevDrafts.map((d) => (d.uid === currentDraft.uid ? currentDraft : d))
           : [...prevDrafts, { ...currentDraft }]
       );
     }
     setSelectedEmail(null);
-    setCurrentDraft(draft);
+    setCurrentDraft(draft || { uid: Date.now(), to: [], subject: "", body: "", cc: [], bcc: [], attachments: [] });
     setIsComposing(true);
+  };
+
+  const handleSelectEmail = (email) => {
+    if (category.toLowerCase() === "drafts") {
+      const draft = {
+        uid: email.uid,
+        to: email.to?.split(',').map((addr) => addr.trim()).filter(Boolean) || [],
+        cc: email.cc?.split(',').map((addr) => addr.trim()).filter(Boolean) || [],
+        bcc: email.bcc?.split(',').map((addr) => addr.trim()).filter(Boolean) || [],
+        subject: email.subject || "",
+        body: email.body || "",
+        attachments: email.attachments || [],
+        inReplyTo: email.inReplyTo || "",
+        references: email.references || "",
+      };
+      handleCompose(draft);
+    } else {
+      setSelectedEmail(email);
+      if (!email.isRead) {
+        setUnreadUids((prev) => new Set(prev).add(email.uid));
+      }
+    }
+  };
+
+  const handleDeleteEmail = (emailId) => {
+    setEmails((prev) => ({
+      ...prev,
+      messages: prev.messages.filter((email) => email.uid !== emailId),
+    }));
+    setSelectedEmail(null);
+    toast.success(
+      category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash'
+        ? "Письмо удалено навсегда"
+        : "Письмо перемещено"
+    );
+  };
+
+  const handleDeleteDraft = (uid) => {
+    deleteDraft(uid, "DRAFTS")
+      .then(() => {
+        setEmails((prev) => ({
+          ...prev,
+          messages: prev.messages.filter((email) => email.uid !== uid),
+          totalMessages: prev.totalMessages - 1,
+        }));
+        setSelectedEmail(null);
+        toast.success("Черновик удален");
+      })
+      .catch((error) => {
+        console.error("❌ Ошибка при удалении черновика:", error);
+        handleError(error, "Не удалось удалить черновик");
+      });
+  };
+
+  const handleError = (e, message) => {
+    console.error(e);
+    toast.error(message);
   };
 
   return (
@@ -143,15 +157,16 @@ export default function Main() {
             <div className="w-[35%] h-full overflow-hidden">
               <EmailList
                 onSelectEmail={handleSelectEmail}
+                onDeleteDraft={handleDeleteDraft}
                 category={category}
-                onCompose={handleCompose}
+                onCompose={() => handleCompose(null)}
                 drafts={drafts}
                 selectedEmail={selectedEmail}
                 unreadList={unreadUids}
                 emails={emails}
                 loadMoreEmails={(beforeUid) => {
                   fetchEmails(category, beforeUid).then((data) => {
-                    setEmails(prevEmails => ({
+                    setEmails((prevEmails) => ({
                       ...prevEmails,
                       messages: [...prevEmails.messages, ...data.messages],
                     }));
@@ -161,7 +176,6 @@ export default function Main() {
                 }}
               />
             </div>
-
             <div className="flex-grow w-5 h-full">
               {isComposing ? (
                 <Modal
@@ -177,9 +191,9 @@ export default function Main() {
                       transform: 'translate(-50%, -50%)',
                       width: '80%',
                       height: '80%',
-                      background: '#2D2D30',
-                      borderRadius: '12px',
-                      padding: '0'
+                      background: '#2D2D30 Ascendancy: 12px',
+                      padding: '0',
+                      border: 'none'
                     },
                     overlay: {
                       backgroundColor: 'rgba(0, 0, 0, 0.5)'
@@ -191,6 +205,21 @@ export default function Main() {
                       sendEmail(email)
                         .then((res) => {
                           console.log("✅ Письмо успешно отправлено:", res);
+                          if (email.uid && category.toLowerCase() === "drafts") {
+                            deleteDraft(email.uid, "DRAFTS")
+                              .then(() => {
+                                setEmails((prev) => ({
+                                  ...prev,
+                                  messages: prev.messages.filter((msg) => msg.uid !== email.uid),
+                                  totalMessages: prev.totalMessages - 1,
+                                }));
+                                toast.success("Черновик удален после отправки");
+                              })
+                              .catch((error) => {
+                                console.error("❌ Ошибка при удалении черновика:", error);
+                                handleError(error, "Не удалось удалить черновик");
+                              });
+                          }
                           setIsComposing(false);
                           setCurrentDraft(null);
                           toast.success("Письмо отправлено!");
@@ -211,7 +240,7 @@ export default function Main() {
                   category={category}
                   onEmailDeleted={handleDeleteEmail}
                   onError={handleError}
-                  onReply={handleReply}
+                  onCompose={handleCompose}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-light-200">

@@ -1,7 +1,6 @@
-// src/components/EmailList.jsx
 import { useEffect, useRef, useState } from "react";
 import EmailCard from "./EmailCard";
-import { faPlus, faComments } from "@fortawesome/free-solid-svg-icons";
+import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./EmailList.css";
 import Loader from "./ui/Loader";
@@ -9,6 +8,7 @@ import Loader from "./ui/Loader";
 export default function EmailList({
   emails = { totalMessages: 0, totalUnreadMessages: 0, messages: [] },
   onSelectEmail,
+  onDeleteDraft,
   category,
   onCompose,
   selectedEmail,
@@ -113,15 +113,29 @@ export default function EmailList({
             return (
               <div key={email.uid} className="space-y-2">
                 {/* Последнее письмо цепочки */}
-                <div className="relative">
-                  <EmailCard
-                    {...email}
-                    isSelected={selectedEmail && email.uid === selectedEmail.uid}
-                    onClick={() => onSelectEmail(email)}
-                    category={category}
-                    isRead={unreadList.has(email.uid)}
-                  />
-                  {isInThread(email) && (
+                <div className="relative flex items-center">
+                  <div className="flex-grow">
+                    <EmailCard
+                      {...email}
+                      isSelected={selectedEmail && email.uid === selectedEmail.uid}
+                      onClick={() => onSelectEmail(email)}
+                      category={category}
+                      isRead={category.toLowerCase() === "drafts" ? true : unreadList.has(email.uid)}
+                    />
+                  </div>
+                  {category.toLowerCase() === "drafts" && (
+                    <button
+                      className="ml-2 text-red-500 hover:text-red-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteDraft(email.uid);
+                      }}
+                      title="Удалить черновик"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  )}
+                  {category.toLowerCase() !== "drafts" && isInThread(email) && (
                     <span
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-light-400 text-sm cursor-pointer hover:text-light-200"
                       onClick={(e) => {

@@ -4,6 +4,7 @@ import {
   faReply,
   faTrashCan,
   faComments,
+  faShare,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { formatFileSize, getFileIcon, parseSender, formatEmailDateFull } from "./utils";
@@ -12,9 +13,9 @@ import { downloadAttachment, moveEmailToFolder, deleteEmailForever } from "../ap
 
 // Функция форматирования получателя
 const formatRecipient = (recipient) => {
-  if (!recipient) return "Неизвестный получатель";
+  if (!recipient) return "Неизвестный отправитель";
   const name = recipient.name && recipient.name.trim() ? recipient.name : null;
-  const address = recipient.address || "";
+  const address = name ? name: recipient.address || "Неизвестный Отправитель";
   return address;
 };
 
@@ -26,7 +27,7 @@ const formatRecipientList = (recipients) => {
   return recipients.map(formatRecipient).join(", ");
 };
 
-export default function EmailDetails({ email, category, onEmailDeleted, onError, onReply }) {
+export default function EmailDetails({ email, category, onEmailDeleted, onError, onCompose }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -103,20 +104,37 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
       return;
     }
 
-    // Формируем черновик для ответа
     const draft = {
       uid: Date.now(),
-      to: [email.from.address], // Отправитель оригинального письма
+      to: [email.from.address],
       cc: [],
       bcc: [],
       subject: `Re: ${email.subject || ""}`,
       body: `<br/><br/><p>------ Исходное сообщение ------</p><p>От: ${formatRecipient(email.from)}</p><p>Дата: ${formatEmailDateFull(email.date)}</p><p>Тема: ${email.subject || ""}</p><p>${email.html || email.text || ""}</p>`,
       attachments: [],
-      inReplyTo: email.messageId || "", // Для цепочки
-      references: email.references ? `${email.references} ${email.messageId || ""}` : (email.messageId || "") // Для цепочки
+      inReplyTo: email.messageId || "",
+      references: email.references ? `${email.references} ${email.messageId || ""}` : (email.messageId || "")
     };
 
-    onReply?.(draft);
+    onCompose?.(draft);
+  };
+
+  const handleForward = (e) => {
+    e.stopPropagation();
+
+    const draft = {
+      uid: Date.now(),
+      to: [],
+      cc: [],
+      bcc: [],
+      subject: `Fwd: ${email.subject || ""}`,
+      body: `<br/><br/><p>------ Пересылаемое сообщение ------</p><p>От: ${formatRecipient(email.from)}</p><p>Дата: ${formatEmailDateFull(email.date)}</p><p>Тема: ${email.subject || ""}</p><p>${email.html || email.text || ""}</p>`,
+      attachments: email.attachments ? [...email.attachments] : [],
+      inReplyTo: email.messageId || "",
+      references: email.references ? `${email.references} ${email.messageId || ""}` : (email.messageId || "")
+    };
+
+    onCompose?.(draft);
   };
 
   const isSentFolder = category.toLowerCase() === "sent";
@@ -126,7 +144,6 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
   return (
     <div className="flex flex-col bg-dark-500 p-6 rounded-xl h-full overflow-hidden">
       <div className="h-full overflow-y-auto">
-        {/* Зафиксированная верхняя часть */}
         <div className="top-0 bg-dark-500">
           <div className="flex items-center">
             <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
@@ -154,7 +171,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
             <div className="flex ml-auto relative" ref={menuRef}>
               <FontAwesomeIcon
                 icon={faComments}
-                className="mx-2 text-light-200 cursor-pointer"
+                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
                 onClick={() => setIsChatOpen(true)}
                 title="Чат"
               />
@@ -165,14 +182,20 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
                 title="Ответить"
               />
               <FontAwesomeIcon
+                icon={faShare}
+                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                onClick={handleForward}
+                title="Переслать"
+              />
+              <FontAwesomeIcon
                 icon={faTrashCan}
-                className="mx-2 text-light-200 cursor-pointer"
+                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
                 onClick={(e) => handleDelete(e)}
                 title="Удалить"
               />
               <FontAwesomeIcon
                 icon={faEllipsisH}
-                className="mx-2 text-light-200 cursor-pointer"
+                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);
@@ -195,8 +218,6 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
           <span className="text-xs text-light-600 font-bold mt-4 block">{formatEmailDateFull(email.date)}</span>
           <span className="text-lg text-light-100 font-light mb-2 block">{email.subject}</span>
         </div>
-
-        {/* Прокручиваемая часть: текст письма и вложения */}
         <div className="mt-4">
           <iframe
             sandbox="allow-same-origin"
@@ -209,7 +230,6 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
             }}
             title="Содержимое письма"
           />
-
           {email.attachments && email.attachments.length > 0 && (
             <div className="mt-6 rounded-3xl drop-shadow-2xl transition-all duration-200">
               <h3 className="text-light-300 mb-2">Вложения:</h3>
@@ -241,7 +261,6 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
           )}
         </div>
       </div>
-
       <ChatView
         isOpen={isChatOpen}
         onRequestClose={() => setIsChatOpen(false)}

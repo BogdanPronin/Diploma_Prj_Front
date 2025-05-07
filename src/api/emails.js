@@ -260,7 +260,7 @@ export const markEmailsAsRead = async (uids) => {
   }
 
   try {
-    const response = await fetch("http://localhost:8080/mark-read-batch", {
+    const response = await fetch("http://localhost:8080/api/mail/mark-read-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uids }),
@@ -370,3 +370,88 @@ export const downloadAttachment = async (uid, filename, folder) => {
   }
 };
 
+export const saveDraft = async (emailData) => {
+  try {
+    const { accessToken, provider, email } = getAuthData();
+
+    const formData = new FormData();
+    formData.append("to", Array.isArray(emailData.to) ? emailData.to.join(',').trim() : emailData.to.trim());
+    if (emailData.cc && (Array.isArray(emailData.cc) ? emailData.cc.length > 0 : emailData.cc.trim())) {
+      formData.append("cc", Array.isArray(emailData.cc) ? emailData.cc.join(',').trim() : emailData.cc.trim());
+    }
+    if (emailData.bcc && (Array.isArray(emailData.bcc) ? emailData.bcc.length > 0 : emailData.bcc.trim())) {
+      formData.append("bcc", Array.isArray(emailData.bcc) ? emailData.bcc.join(',').trim() : emailData.bcc.trim());
+    }
+    formData.append("subject", emailData.subject.trim());
+    formData.append("html", emailData.body.trim());
+    formData.append("providerName", provider);
+    formData.append("email", email);
+    if (emailData.inReplyTo) {
+      formData.append("inReplyTo", emailData.inReplyTo.trim());
+    }
+    if (emailData.references) {
+      formData.append("references", emailData.references.trim());
+    }
+
+    if (emailData.attachments && emailData.attachments.length > 0) {
+      emailData.attachments.forEach((attachment) => {
+        console.log("📎 Attaching file:", attachment.name);
+        formData.append("attachments", attachment.fileObj, attachment.name);
+      });
+    }
+
+    console.log("📝 Saving draft:", Object.fromEntries(formData));
+
+    const response = await fetch("http://localhost:8080/api/mail/save-draft", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to save draft: ${response.statusText}`);
+    }
+
+    const uid = await response.json();
+    toast.success("Черновик успешно сохранен!");
+    return uid; // Возвращает UID черновика
+  } catch (error) {
+    console.error("Error saving draft:", error);
+    toast.error(error.message || "Не удалось сохранить черновик.");
+    throw error;
+  }
+};
+
+export const deleteDraft = async (uid, folder = "DRAFTS") => {
+  try {
+    const { accessToken, provider, email } = getAuthData();
+
+    const response = await fetch("http://localhost:8080/api/mail/delete-forever", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        providerName: provider,
+        email,
+        uid,
+        folderName: folder,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to delete draft: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Error deleting draft:", error);
+    throw error;
+  }
+};

@@ -6,6 +6,7 @@ import { faTimes } from "@fortawesome/free-solid-svg-icons";
 import { toast } from 'react-toastify';
 import { formatFileSize, getFileIcon } from '../utils/format';
 import Chips from 'react-chips';
+import { saveDraft } from '../api/emails';
 
 // Функция для валидации email-адресов
 const validateEmails = (emails) => {
@@ -18,6 +19,18 @@ const normalizeToArray = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string' && value.trim()) return value.split(',').map(email => email.trim());
   return [];
+};
+
+// Проверка, заполнено ли письмо
+const isDraftNotEmpty = (email) => {
+  return (
+    (email.to && email.to.length > 0) ||
+    (email.cc && email.cc.length > 0) ||
+    (email.bcc && email.bcc.length > 0) ||
+    (email.subject && email.subject.trim()) ||
+    (email.body && email.body.trim()) ||
+    (email.attachments && email.attachments.length > 0)
+  );
 };
 
 export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) {
@@ -115,6 +128,25 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) 
 
     onSendEmail(emailData);
     toast.success("Отправка...");
+    onClose();
+  };
+
+  const handleCancel = async () => {
+    if (isDraftNotEmpty(email)) {
+      try {
+        const emailData = {
+          ...email,
+          to: email.to.join(','),
+          cc: email.cc.join(','),
+          bcc: email.bcc.join(','),
+          body: email.body
+        };
+        const uid = await saveDraft(emailData);
+        console.log(`Черновик сохранен с UID: ${uid}`);
+      } catch (error) {
+        console.error("Ошибка при сохранении черновика:", error);
+      }
+    }
     onClose();
   };
 
@@ -222,7 +254,7 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) 
         </div>
       )}
       <div className="flex justify-end gap-4">
-        <button className="bg-gray-500 p-2 rounded text-white" onClick={onClose}>
+        <button className="bg-gray-500 p-2 rounded text-white" onClick={handleCancel}>
           Отмена
         </button>
         <button className="bg-blue-200 p-2 rounded text-white" onClick={handleSend}>
