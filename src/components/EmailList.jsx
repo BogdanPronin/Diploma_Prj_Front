@@ -22,8 +22,13 @@ export default function EmailList({
   const [expandedThreads, setExpandedThreads] = useState(new Set());
 
   useEffect(() => {
-    console.log("EmailList: Category:", category); // Отладка
-    console.log("EmailList: Emails:", messages);
+    console.log("EmailList: Category:", category);
+    console.log("EmailList: Messages:", messages.map(m => ({
+      uid: m.uid,
+      messageId: m.messageId,
+      references: m.references,
+      threadMessages: m.threadMessages?.map(c => c.uid) || null
+    })));
   }, [category, messages]);
 
   const handleScroll = () => {
@@ -36,6 +41,7 @@ export default function EmailList({
       if (messages && messages.length > 0) {
         const oldestUid = messages[messages.length - 1].uid;
         if (oldestUid !== lastLoadedUid) {
+          console.log("Loading more with beforeUid:", oldestUid);
           setIsLoading(true);
           setLastLoadedUid(oldestUid);
           loadMoreEmails(oldestUid).finally(() => setIsLoading(false));
@@ -47,7 +53,7 @@ export default function EmailList({
   useEffect(() => {
     const container = containerRef.current;
     container.addEventListener("scroll", handleScroll);
-    console.log(unreadList);
+    console.log("unreadList:", unreadList);
     return () => container.removeEventListener("scroll", handleScroll);
   }, [messages, isLoading]);
 
@@ -67,13 +73,18 @@ export default function EmailList({
   // Подсчет общего количества писем в цепочке
   const countThreadMessages = (email) => {
     let count = 1;
-    if (email.children) {
-      count += email.children.reduce(
+    if (email.threadMessages) {
+      count += email.threadMessages.reduce(
         (sum, child) => sum + countThreadMessages(child),
         0
       );
     }
     return count;
+  };
+
+  // Проверка, является ли письмо частью цепочки
+  const isInThread = (email) => {
+    return (email.threadMessages && email.threadMessages.length > 0) || (email.references && email.references.trim().length > 0);
   };
 
   return (
@@ -101,17 +112,16 @@ export default function EmailList({
 
             return (
               <div key={email.uid} className="space-y-2">
-                {/* Корневое письмо */}
+                {/* Последнее письмо цепочки */}
                 <div className="relative">
                   <EmailCard
-                    key={email.uid}
                     {...email}
                     isSelected={selectedEmail && email.uid === selectedEmail.uid}
                     onClick={() => onSelectEmail(email)}
                     category={category}
                     isRead={unreadList.has(email.uid)}
                   />
-                  {threadCount > 1 && (
+                  {isInThread(email) && (
                     <span
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 text-light-400 text-sm cursor-pointer hover:text-light-200"
                       onClick={(e) => {
@@ -124,19 +134,25 @@ export default function EmailList({
                   )}
                 </div>
 
-                {/* Дочерние письма */}
-                {isExpanded && email.children && email.children.length > 0 && (
+                {/* Цепочка (от старого к новому) */}
+                {isExpanded && email.threadMessages && email.threadMessages.length > 0 && (
                   <div className="ml-6 space-y-2">
-                    {email.children.map((child) => (
-                      <EmailCard
-                        key={child.uid}
-                        {...child}
-                        isSelected={selectedEmail && child.uid === selectedEmail.uid}
-                        onClick={() => onSelectEmail(child)}
-                        category={category}
-                        isRead={unreadList.has(child.uid)}
-                      />
-                    ))}
+                    {email.threadMessages
+                      .sort((a, b) => {
+                        const dateA = a.date ? new Date(a.date).getTime() : 0;
+                        const dateB = b.date ? new Date(b.date).getTime() : 0;
+                        return dateA - dateB; // От старого к новому
+                      })
+                      .map((threadEmail) => (
+                        <EmailCard
+                          key={threadEmail.uid}
+                          {...threadEmail}
+                          isSelected={selectedEmail && threadEmail.uid === selectedEmail.uid}
+                          onClick={() => onSelectEmail(threadEmail)}
+                          category={category}
+                          isRead={unreadList.has(threadEmail.uid)}
+                        />
+                      ))}
                   </div>
                 )}
               </div>
