@@ -1,8 +1,8 @@
-import React from "react";
-import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-export default function SideNav({ selectCategory, onSelectCategory }) {
-  const [activeTab, setActiveTab] = useState(selectCategory);
+export default function SideNav() {
+  const { category } = useParams();
+  const navigate = useNavigate();
 
   const navItems = [
     { id: "INBOX", name: "Входящие" },
@@ -11,6 +11,10 @@ export default function SideNav({ selectCategory, onSelectCategory }) {
     { id: "TRASH", name: "Корзина" },
     { id: "SPAM", name: "Спам" },
   ];
+
+  const handleSelectCategory = (id) => {
+    navigate(`/folder/${id}`);
+  };
 
   return (
     <nav className="w-3/12 h-full bg-dark-600 flex flex-col items-center">
@@ -24,22 +28,17 @@ export default function SideNav({ selectCategory, onSelectCategory }) {
           <li
             key={navItem.id}
             className={`cursor-pointer flex items-center relative py-2 transition-all
-              ${activeTab === navItem.id ? "font-semibold" : "text-light-200"}
+              ${category?.toUpperCase() === navItem.id ? "font-semibold" : "text-light-200"}
               ${index > 0 ? "my-4" : "mb-4"}`}
-            onClick={() => {
-              setActiveTab(navItem.id);
-              onSelectCategory(navItem.id);
-            }}
+            onClick={() => handleSelectCategory(navItem.id)}
           >
-            {/* Линия слева у активногFо пункта */}
-            {activeTab === navItem.id && (
+            {category?.toUpperCase() === navItem.id && (
               <div className="w-6 h-[2px] bg-light-200 absolute -left-12"></div>
             )}
             <p className="text-light-200 text-lm w-32">{navItem.name}</p>
           </li>
         ))}
       </ul>
-      
     </nav>
   );
 }

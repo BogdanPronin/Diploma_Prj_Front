@@ -1,15 +1,13 @@
-// src/components/AccountSelector.tsx
-import React from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 
-const AccountSelector: React.FC<{ onSelectAccount: () => void }> = ({ onSelectAccount }) => {
+const AccountSelector = ({ onSelectAccount }) => {
   const navigate = useNavigate();
   const accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
 
-  const handleSelectAccount = (email: string) => {
+  const handleSelectAccount = (email) => {
     localStorage.setItem("activeAccount", JSON.stringify(email));
     onSelectAccount();
-    navigate("/inbox");
+    navigate("/folder/INBOX");
   };
 
   const handleAddAccount = () => {
@@ -33,7 +31,7 @@ const AccountSelector: React.FC<{ onSelectAccount: () => void }> = ({ onSelectAc
           Выберите аккаунт
         </h2>
         <div className="flex flex-col gap-2">
-          {accountEntries.map(([email, account]: [string, any]) => (
+          {accountEntries.map(([email, account]) => (
             <button
               key={email}
               onClick={() => handleSelectAccount(email)}
@@ -49,8 +47,8 @@ const AccountSelector: React.FC<{ onSelectAccount: () => void }> = ({ onSelectAc
                 <div className="w-8 h-8 bg-green-200 rounded-full mr-3"></div>
               )}
               <div className="flex flex-col">
-                <span className=" text-justify">{email}</span>
-                <span className=" text-justify text-xs text-light-500">{account.name}</span>
+                <span className="text-justify">{email}</span>
+                <span className="text-justify text-xs text-light-500">{account.name}</span>
               </div>
             </button>
           ))}

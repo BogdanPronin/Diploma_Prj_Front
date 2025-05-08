@@ -1,18 +1,17 @@
-// src/App.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import AuthPage from "./components/AuthPage";
 import MainLayout from "./components/MainLayout";
-import AccountSelector from "./components/AccountSelector.tsx";
+import AccountSelector from "./components/AccountSelector";
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedRoute = ({ children }) => {
   const activeAccountEmail = JSON.parse(localStorage.getItem("activeAccount") || "null");
   const accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
   const isAuthenticated = activeAccountEmail && accounts[activeAccountEmail];
-  return isAuthenticated ? <>{children}</> : <Navigate to="/select-account" replace />;
+  return isAuthenticated ? children : <Navigate to="/select-account" replace />;
 };
 
-const App: React.FC = () => {
+const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -36,14 +35,15 @@ const App: React.FC = () => {
           element={<AccountSelector onSelectAccount={handleLogin} />}
         />
         <Route
-          path="/inbox"
+          path="/folder/:category"
           element={
             <ProtectedRoute>
               <MainLayout />
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/select-account" replace />} />
+        <Route path="/" element={<Navigate to="/folder/INBOX" replace />} />
+        <Route path="*" element={<Navigate to="/folder/INBOX" replace />} />
       </Routes>
     </Router>
   );

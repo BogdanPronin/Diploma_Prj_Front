@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import ContentHeader from "./ContentHeader";
 import EmailDetails from "./EmailDetails";
 import EmailList from "./EmailList";
@@ -12,27 +13,46 @@ import Loader from './ui/Loader';
 Modal.setAppElement('#root');
 
 export default function Main() {
+  const { category } = useParams();
+  const navigate = useNavigate();
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [category, setCategory] = useState("INBOX");
+  const [currentCategory, setCurrentCategory] = useState(category || "INBOX");
   const [emails, setEmails] = useState({ totalMessages: 0, totalUnreadMessages: 0, messages: [] });
   const [drafts, setDrafts] = useState([]);
   const [currentDraft, setCurrentDraft] = useState(null);
   const [unreadUids, setUnreadUids] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
+  // Валидные категории
+  const validCategories = ["INBOX", "DRAFTS", "SENT", "TRASH", "SPAM", "корзина"];
+
+  useEffect(() => {
+    // Проверяем, валидна ли категория
+    if (!category || !validCategories.includes(category.toUpperCase())) {
+      navigate("/folder/INBOX", { replace: true });
+      setCurrentCategory("INBOX");
+    } else {
+      setCurrentCategory(category.toUpperCase());
+    }
+    // Сбрасываем выбранное письмо и окно композера при смене категории
+    setSelectedEmail(null);
+    setIsComposing(false);
+    setCurrentDraft(null);
+  }, [category, navigate]);
+
   useEffect(() => {
     setLoading(true);
-    console.log(`📩 Запрос писем для категории: ${category}`);
+    console.log(`📩 Запрос писем для категории: ${currentCategory}`);
     setEmails({ totalMessages: 0, totalUnreadMessages: 0, messages: [] });
 
-    fetchEmails(category)
+    fetchEmails(currentCategory)
       .then((data) => {
         console.log(`✅ Письма загружены: `, data);
         setEmails(data);
       })
       .finally(() => setLoading(false));
-  }, [category]);
+  }, [currentCategory]);
 
   useEffect(() => {
     const markAsReadOnUnload = async () => {
@@ -91,7 +111,7 @@ export default function Main() {
   };
 
   const handleSelectEmail = (email) => {
-    if (category.toLowerCase() === "drafts") {
+    if (currentCategory.toLowerCase() === "drafts") {
       const draft = {
         uid: email.uid,
         to: email.to?.split(',').map((addr) => addr.trim()).filter(Boolean) || [],
@@ -119,7 +139,7 @@ export default function Main() {
     }));
     setSelectedEmail(null);
     toast.success(
-      category.toLowerCase() === 'корзина' || category.toLowerCase() === 'trash'
+      currentCategory.toLowerCase() === 'корзина' || currentCategory.toLowerCase() === 'trash'
         ? "Письмо удалено навсегда"
         : "Письмо перемещено"
     );
@@ -149,7 +169,7 @@ export default function Main() {
 
   return (
     <main className="flex flex-row overflow-hidden w-full h-screen bg-dark-600">
-      <SideNav selectCategory={category} onSelectCategory={setCategory} />
+      <SideNav />
       <div className="flex flex-col flex-grow">
         <ContentHeader />
         {loading ? <Loader /> : (
@@ -158,14 +178,14 @@ export default function Main() {
               <EmailList
                 onSelectEmail={handleSelectEmail}
                 onDeleteDraft={handleDeleteDraft}
-                category={category}
+                category={currentCategory}
                 onCompose={() => handleCompose(null)}
                 drafts={drafts}
                 selectedEmail={selectedEmail}
                 unreadList={unreadUids}
                 emails={emails}
                 loadMoreEmails={(beforeUid) => {
-                  fetchEmails(category, beforeUid).then((data) => {
+                  fetchEmails(currentCategory, beforeUid).then((data) => {
                     setEmails((prevEmails) => ({
                       ...prevEmails,
                       messages: [...prevEmails.messages, ...data.messages],
@@ -205,7 +225,7 @@ export default function Main() {
                       sendEmail(email)
                         .then((res) => {
                           console.log("✅ Письмо успешно отправлено:", res);
-                          if (email.uid && category.toLowerCase() === "drafts") {
+                          if (email.uid && currentCategory.toLowerCase() === "drafts") {
                             deleteDraft(email.uid, "DRAFTS")
                               .then(() => {
                                 setEmails((prev) => ({
@@ -237,7 +257,7 @@ export default function Main() {
               ) : selectedEmail ? (
                 <EmailDetails
                   email={selectedEmail}
-                  category={category}
+                  category={currentCategory}
                   onEmailDeleted={handleDeleteEmail}
                   onError={handleError}
                   onCompose={handleCompose}

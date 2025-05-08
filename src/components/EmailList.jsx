@@ -1,3 +1,4 @@
+// src/components/EmailList.jsx
 import { useEffect, useRef, useState } from "react";
 import EmailCard from "./EmailCard";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";

@@ -1,3 +1,4 @@
+//src/components/MainLayout.jsx
 import Main from "./Main";
 import SideNav from "./SideNav";
 import { ToastContainer } from 'react-toastify';
