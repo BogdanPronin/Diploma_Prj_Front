@@ -1,8 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom";
 
-export default function SideNav() {
+export default function SideNav({ setIsSideNavOpen }) {
   const { category } = useParams();
   const navigate = useNavigate();
+  console.log("SideNav рендерится, category:", category);
 
   const navItems = [
     { id: "INBOX", name: "Входящие" },
@@ -14,11 +15,12 @@ export default function SideNav() {
 
   const handleSelectCategory = (id) => {
     navigate(`/folder/${id}`);
+    setIsSideNavOpen(false);
   };
 
   return (
-    <nav className="w-3/12 h-full bg-dark-600 flex flex-col items-center">
-      <div className="flex items-center my-14">
+    <div className="w-full h-full flex flex-col items-center">
+      <div className="flex items-center my-6">
         <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
         <span className="font-semibold text-light-100 ml-4 text-2xl">Messenger-Mail</span>
       </div>
@@ -39,6 +41,6 @@ export default function SideNav() {
           </li>
         ))}
       </ul>
-    </nav>
+    </div>
   );
 }

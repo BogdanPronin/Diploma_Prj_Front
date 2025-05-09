@@ -199,27 +199,27 @@ export default function ComposeEmail({ onSendEmail, draft, setDraft, onClose }) 
         onChange={(e) => setEmail((prev) => ({ ...prev, subject: e.target.value }))}
       />
 
-      <ReactQuill
-        value={email.body}
-        onChange={handleEditorChange}
-        modules={{
-          toolbar: [
-            [{ font: [] }, { size: [] }],
-            ["bold", "italic", "underline", "strike"],
-            [{ color: [] }, { background: [] }],
-            [{ script: "sub" }, { script: "super" }],
-            [{ header: "1" }, { header: "2" }, "blockquote", "code-block"],
-            [{ list: "ordered" }, { list: "bullet" }, { indent: "-1" }, { indent: "+1" }],
-            [{ direction: "rtl" }, { align: [] }],
-            ["link", "image", "video", "formula"],
-            ["clean"],
-          ],
-        }}
-        theme="snow"
-        placeholder="Напишите ваше сообщение..."
-        className="bg-white h-96 pb-20"
-      />
-
+      <div>
+        <ReactQuill
+          value={email.body}
+          onChange={handleEditorChange}
+          modules={{
+            toolbar: [
+              [{ font: [] }, { size: [] }],
+              ["bold", "italic", "underline"],
+              [{ color: [] }, { background: [] }],
+              [{ script: "sub" }, { script: "super" }],
+              [{ header: "1" }, { header: "2" }, "blockquote", "code-block"],
+              [{ list: "ordered" }, { list: "bullet" }, { indent: "-1" }, { indent: "+1" }],
+              [{ direction: "rtl" }, { align: [] }],
+              ["link", "image"],
+            ],
+          }}
+          theme="snow"
+          placeholder="Напишите ваше сообщение..."
+          className="bg-white "
+        />
+      </div>
       <div className="mt-4">
         <input
           type="file"

@@ -15,7 +15,7 @@ import { downloadAttachment, moveEmailToFolder, deleteEmailForever } from "../ap
 const formatRecipient = (recipient) => {
   if (!recipient) return "Неизвестный отправитель";
   const name = recipient.name && recipient.name.trim() ? recipient.name : null;
-  const address = name ? name: recipient.address || "Неизвестный Отправитель";
+  const address = name ? name : recipient.address || "Неизвестный Отправитель";
   return address;
 };
 
@@ -145,7 +145,7 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
     <div className="flex flex-col bg-dark-500 p-6 rounded-xl h-full overflow-hidden">
       <div className="h-full overflow-y-auto">
         <div className="top-0 bg-dark-500">
-          <div className="flex items-center">
+          <div className="flex items-center flex-wrap gap-2">
             <div className={`w-10 h-10 rounded-xl bg-red-200 mr-4 ${email.image || ""}`}></div>
             <div className="flex flex-col flex-grow">
               <span className="text-sm text-light-200 font-medium">{senderDisplay}</span>
@@ -168,34 +168,34 @@ export default function EmailDetails({ email, category, onEmailDeleted, onError,
                 )}
               </div>
             </div>
-            <div className="flex ml-auto relative" ref={menuRef}>
+            <div className="flex flex-wrap gap-2 ml-auto relative" ref={menuRef}>
               <FontAwesomeIcon
                 icon={faComments}
-                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                className="text-light-200 cursor-pointer hover:text-blue-200 transition-colors text-lg"
                 onClick={() => setIsChatOpen(true)}
                 title="Чат"
               />
               <FontAwesomeIcon
                 icon={faReply}
-                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                className="text-light-200 cursor-pointer hover:text-blue-200 transition-colors text-lg"
                 onClick={handleReply}
                 title="Ответить"
               />
               <FontAwesomeIcon
                 icon={faShare}
-                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                className="text-light-200 cursor-pointer hover:text-blue-200 transition-colors text-lg"
                 onClick={handleForward}
                 title="Переслать"
               />
               <FontAwesomeIcon
                 icon={faTrashCan}
-                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                className="text-light-200 cursor-pointer hover:text-blue-200 transition-colors text-lg"
                 onClick={(e) => handleDelete(e)}
                 title="Удалить"
               />
               <FontAwesomeIcon
                 icon={faEllipsisH}
-                className="mx-2 text-light-200 cursor-pointer hover:text-blue-200 transition-colors"
+                className="text-light-200 cursor-pointer hover:text-blue-200 transition-colors text-lg"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsMenuOpen(!isMenuOpen);

@@ -1,4 +1,3 @@
-// src/components/EmailCard.jsx
 import { faPaperclip, faCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { formatEmailDate } from "./utils";
@@ -43,9 +42,9 @@ export default function EmailCard(props) {
         {secondLetter && <span className="absolute bottom-1 right-1 text-xs">{secondLetter}</span>}
       </div>
 
-      <div className="flex flex-col w-full ml-3">
+      <div className="flex flex-col w-full ml-3 max-w-[calc(100%-60px)]"> {/* Ограничиваем ширину */}
         <div className="flex items-center">
-          <span className="text-xs font-medium mr-auto">{name}</span>
+          <span className="text-xs font-medium mr-auto max-w-[100px] truncate">{name}</span>
 
           <div className="flex items-center space-x-2">
             {!isRead && (

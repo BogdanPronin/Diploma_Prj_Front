@@ -46,12 +46,10 @@ export default function ContentHeader() {
         className="text-xl text-light-300"
       />
       <input
-        placeholder="Search..."
+        placeholder="Поиск..."
         className="w-4/12 mr-auto ml-4 bg-transparent outline-none"
       />
-      <FontAwesomeIcon icon={faFolder} className="text-light-600 mx-2" />
-      <FontAwesomeIcon icon={faBell} className="text-light-600 mx-2" />
-      <FontAwesomeIcon icon={faEnvelope} className="text-light-600 mx-2" />
+      
       <div className="relative flex items-center">
         {userPicture ? (
           <img

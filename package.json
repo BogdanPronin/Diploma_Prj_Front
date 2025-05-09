@@ -30,6 +30,7 @@
     "nodemailer": "^6.10.0",
     "pdf-lib": "^1.17.1",
     "react": "^18.1.0",
+    "react-chips": "^0.8.0",
     "react-dom": "^18.1.0",
     "react-modal": "^3.16.3",
     "react-quill": "^2.0.0",

@@ -3,7 +3,7 @@ import Modal from "react-modal";
 import { fetchEmailsFromSender, fetchEmailsSentTo, downloadAttachment, sendEmail } from "../api/emails";
 import { formatEmailDate, parseSender, formatFileSize, getFileIcon } from "./utils";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTimes, faArrowUp, faArrowDown, faPaperclip } from "@fortawesome/free-solid-svg-icons";
+import { faTimes, faPaperclip, faAngleDown, faAngleUp, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { toast } from "react-toastify";
 
 Modal.setAppElement("#root");
@@ -134,8 +134,32 @@ export default function ChatView({ isOpen, onRequestClose, senderEmail }) {
         <Modal
             isOpen={isOpen}
             onRequestClose={onRequestClose}
-            className="w-3/5 h-4/5 bg-dark-500 p-0 rounded-xl overflow-hidden outline-none shadow-none"
-            overlayClassName="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center"
+            style={{
+                content: {
+                    top: '50%',
+                    left: '50%',
+                    right: 'auto',
+                    bottom: 'auto',
+                    marginRight: '-50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '90%',
+                    maxWidth: '600px',
+                    height: '90%',
+                    maxHeight: '600px',
+                    background: '#2D2D30',
+                    padding: '0px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    opacity: 1,
+                },
+                overlay: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 60,
+                    opacity: 1,
+                }
+            }}
         >
             <div className="sticky top-0 bg-dark-500 p-4 text-light-200 font-bold text-lg border-b border-gray-700 flex justify-between items-center shadow-md z-10">
                 <span>Переписка с {senderEmail || "Не указан"}</span>
@@ -263,7 +287,6 @@ export default function ChatView({ isOpen, onRequestClose, senderEmail }) {
                     <button
                         onClick={handleSendMessage}
                         disabled={loading}
-                        
                     >
                         <FontAwesomeIcon className={`bg-white text-black p-2 rounded-full hover:bg-gray-200 transition ${
                             loading ? "opacity-50 cursor-not-allowed" : ""
@@ -274,9 +297,9 @@ export default function ChatView({ isOpen, onRequestClose, senderEmail }) {
 
             <button
                 onClick={handleScrollToggle}
-                className="fixed bottom-6 right-6 bg-gray-700 text-white p-3 rounded-full shadow-lg hover:bg-gray-600 transition"
+                className="fixed bottom-24 right-6 bg-gray-700 text-white p-3 rounded-full shadow-lg hover:bg-gray-600 transition opacity-50 hover:opacity-100"
             >
-                <FontAwesomeIcon icon={isAtTop ? faArrowDown : faArrowUp} className="text-lg" />
+                <FontAwesomeIcon icon={isAtTop ? faAngleDown : faAngleUp} className="text-lg" />
             </button>
         </Modal>
     );

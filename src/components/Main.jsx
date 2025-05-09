@@ -9,6 +9,8 @@ import { fetchEmails, deleteEmailForever, sendEmail, moveEmailToFolder, markEmai
 import Modal from "react-modal";
 import { toast } from 'react-toastify';
 import Loader from './ui/Loader';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
 
 Modal.setAppElement('#root');
 
@@ -23,22 +25,22 @@ export default function Main() {
   const [currentDraft, setCurrentDraft] = useState(null);
   const [unreadUids, setUnreadUids] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+  const [isEmailDetailsModalOpen, setIsEmailDetailsModalOpen] = useState(false);
 
-  // Валидные категории
   const validCategories = ["INBOX", "DRAFTS", "SENT", "TRASH", "SPAM", "корзина"];
 
   useEffect(() => {
-    // Проверяем, валидна ли категория
     if (!category || !validCategories.includes(category.toUpperCase())) {
       navigate("/folder/INBOX", { replace: true });
       setCurrentCategory("INBOX");
     } else {
       setCurrentCategory(category.toUpperCase());
     }
-    // Сбрасываем выбранное письмо и окно композера при смене категории
     setSelectedEmail(null);
     setIsComposing(false);
     setCurrentDraft(null);
+    setIsEmailDetailsModalOpen(false);
   }, [category, navigate]);
 
   useEffect(() => {
@@ -68,14 +70,9 @@ export default function Main() {
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        markAsReadOnUnload();
-      }
+      if (document.visibilityState === 'hidden') markAsReadOnUnload();
     };
-
-    const handlePageHide = () => {
-      markAsReadOnUnload();
-    };
+    const handlePageHide = () => markAsReadOnUnload();
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("pagehide", handlePageHide);
@@ -126,8 +123,9 @@ export default function Main() {
       handleCompose(draft);
     } else {
       setSelectedEmail(email);
-      if (!email.isRead) {
-        setUnreadUids((prev) => new Set(prev).add(email.uid));
+      if (!email.isRead) setUnreadUids((prev) => new Set(prev).add(email.uid));
+      if (window.innerWidth < 940) {
+        setIsEmailDetailsModalOpen(true);
       }
     }
   };
@@ -138,6 +136,7 @@ export default function Main() {
       messages: prev.messages.filter((email) => email.uid !== emailId),
     }));
     setSelectedEmail(null);
+    setIsEmailDetailsModalOpen(false);
     toast.success(
       currentCategory.toLowerCase() === 'корзина' || currentCategory.toLowerCase() === 'trash'
         ? "Письмо удалено навсегда"
@@ -154,6 +153,7 @@ export default function Main() {
           totalMessages: prev.totalMessages - 1,
         }));
         setSelectedEmail(null);
+        setIsEmailDetailsModalOpen(false);
         toast.success("Черновик удален");
       })
       .catch((error) => {
@@ -169,12 +169,37 @@ export default function Main() {
 
   return (
     <main className="flex flex-row overflow-hidden w-full h-screen bg-dark-600">
-      <SideNav />
-      <div className="flex flex-col flex-grow">
+      {/* Кнопка гамбургер-меню */}
+      {window.innerWidth < 940 && (
+        <span
+          className="fixed my-5 z-50 p-2 text-light-200 text-2xl rounded"
+          onClick={() => setIsSideNavOpen(!isSideNavOpen)}
+        >
+          <div className="w-6 h-6 bg-blue-600 rounded-full"></div>
+        </span>
+      )}
+
+      {/* SideNav */}
+      <nav
+        className={`h-full bg-dark-600 flex flex-col items-center z-40 w-64 min-[940px]:w-60
+          ${window.innerWidth < 940 ? `fixed top-0 left-0 transition-transform duration-300 ease-in-out ${isSideNavOpen ? "translate-x-0" : "-translate-x-full"}` : ""}`}
+      >
+        <SideNav setIsSideNavOpen={setIsSideNavOpen} />
+      </nav>
+
+      {/* Оверлей для закрытия меню */}
+      {isSideNavOpen && window.innerWidth < 940 && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsSideNavOpen(false)}
+        />
+      )}
+
+      <div className="flex flex-col flex-grow min-[940px]:ml-0">
         <ContentHeader />
         {loading ? <Loader /> : (
           <div className="flex flex-row flex-grow h-[calc(100%-64px)] overflow-hidden">
-            <div className="w-[35%] h-full overflow-hidden">
+            <div className={`min-w-[350px] ${window.innerWidth < 940 ? "flex-grow" : "w-[35%]"} h-full overflow-hidden`}>
               <EmailList
                 onSelectEmail={handleSelectEmail}
                 onDeleteDraft={handleDeleteDraft}
@@ -196,65 +221,8 @@ export default function Main() {
                 }}
               />
             </div>
-            <div className="flex-grow w-5 h-full">
-              {isComposing ? (
-                <Modal
-                  isOpen={isComposing}
-                  onRequestClose={() => setIsComposing(false)}
-                  style={{
-                    content: {
-                      top: '50%',
-                      left: '50%',
-                      right: 'auto',
-                      bottom: 'auto',
-                      marginRight: '-50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: '80%',
-                      height: '80%',
-                      background: '#2D2D30 Ascendancy: 12px',
-                      padding: '0',
-                      border: 'none'
-                    },
-                    overlay: {
-                      backgroundColor: 'rgba(0, 0, 0, 0.5)'
-                    }
-                  }}
-                >
-                  <ComposeEmail
-                    onSendEmail={(email) => {
-                      sendEmail(email)
-                        .then((res) => {
-                          console.log("✅ Письмо успешно отправлено:", res);
-                          if (email.uid && currentCategory.toLowerCase() === "drafts") {
-                            deleteDraft(email.uid, "DRAFTS")
-                              .then(() => {
-                                setEmails((prev) => ({
-                                  ...prev,
-                                  messages: prev.messages.filter((msg) => msg.uid !== email.uid),
-                                  totalMessages: prev.totalMessages - 1,
-                                }));
-                                toast.success("Черновик удален после отправки");
-                              })
-                              .catch((error) => {
-                                console.error("❌ Ошибка при удалении черновика:", error);
-                                handleError(error, "Не удалось удалить черновик");
-                              });
-                          }
-                          setIsComposing(false);
-                          setCurrentDraft(null);
-                          toast.success("Письмо отправлено!");
-                        })
-                        .catch((error) => {
-                          console.error("❌ Ошибка при отправке письма:", error);
-                          handleError(error, "Не удалось отправить письмо");
-                        });
-                    }}
-                    draft={currentDraft}
-                    setDraft={setCurrentDraft}
-                    onClose={() => setIsComposing(false)}
-                  />
-                </Modal>
-              ) : selectedEmail ? (
+            {window.innerWidth >= 940 && selectedEmail && !isComposing && (
+              <div className="flex-grow h-full">
                 <EmailDetails
                   email={selectedEmail}
                   category={currentCategory}
@@ -262,15 +230,124 @@ export default function Main() {
                   onError={handleError}
                   onCompose={handleCompose}
                 />
-              ) : (
+              </div>
+            )}
+            {window.innerWidth >= 940 && !selectedEmail && !isComposing && (
+              <div className="flex-grow h-full">
                 <div className="flex h-full items-center justify-center text-light-200">
                   Выберите письмо
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Модальное окно для ComposeEmail */}
+      {isComposing && (
+        <Modal
+          isOpen={isComposing}
+          onRequestClose={() => setIsComposing(false)}
+          style={{
+            content: {
+              top: '50%',
+              left: '50%',
+              right: 'auto',
+              bottom: 'auto',
+              marginRight: '-50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '800px',
+              height: '90%',
+              maxHeight: '600px',
+              background: '#2D2D30',
+              padding: '0px',
+              border: 'none',
+              borderRadius: '8px',
+              overflow: 'hidden'
+            },
+            overlay: {
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 50
+            }
+          }}
+        >
+          <ComposeEmail
+            onSendEmail={(email) => {
+              sendEmail(email)
+                .then((res) => {
+                  console.log("✅ Письмо успешно отправлено:", res);
+                  if (email.uid && currentCategory.toLowerCase() === "drafts") {
+                    deleteDraft(email.uid, "DRAFTS")
+                      .then(() => {
+                        setEmails((prev) => ({
+                          ...prev,
+                          messages: prev.messages.filter((msg) => msg.uid !== email.uid),
+                          totalMessages: prev.totalMessages - 1,
+                        }));
+                        toast.success("Черновик удален после отправки");
+                      })
+                      .catch((error) => {
+                        console.error("❌ Ошибка при удалении черновика:", error);
+                        handleError(error, "Не удалось удалить черновик");
+                      });
+                  }
+                  setIsComposing(false);
+                  setCurrentDraft(null);
+                  toast.success("Письмо отправлено!");
+                })
+                .catch((error) => {
+                  console.error("❌ Ошибка при отправке письма:", error);
+                  handleError(error, "Не удалось отправить письмо");
+                });
+            }}
+            draft={currentDraft}
+            setDraft={setCurrentDraft}
+            onClose={() => setIsComposing(false)}
+          />
+        </Modal>
+      )}
+
+      {/* Модальное окно для EmailDetails на узких экранах */}
+      {selectedEmail && window.innerWidth < 940 && (
+        <Modal
+          isOpen={isEmailDetailsModalOpen}
+          onRequestClose={() => {
+            setSelectedEmail(null);
+            setIsEmailDetailsModalOpen(false);
+          }}
+          style={{
+            content: {
+              top: '50%',
+              left: '50%',
+              right: 'auto',
+              bottom: 'auto',
+              marginRight: '-50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '600px',
+              height: '90%',
+              maxHeight: '600px',
+              padding: '0px',
+              background: '#2D2D30',
+              border: 'none',
+              overflow: 'hidden'
+            },
+            overlay: {
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 50
+            }
+          }}
+        >
+          <EmailDetails
+            email={selectedEmail}
+            category={currentCategory}
+            onEmailDeleted={handleDeleteEmail}
+            onError={handleError}
+            onCompose={handleCompose}
+          />
+        </Modal>
+      )}
     </main>
   );
 }
