@@ -39,7 +39,7 @@ export default function GoogleAccessButton({ onLogin }) {
   return (
     <button
       onClick={handleLogin}
-      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      className="bg-red-500 text-white p-2 rounded hover:bg-red-600 w-full flex justify-center items-center"
     >
       Войти через Google
     </button>

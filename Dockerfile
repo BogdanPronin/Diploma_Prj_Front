@@ -12,7 +12,7 @@ COPY package*.json ./
 
 # Устанавливаем зависимости с использованием BuildKit mount для кэширования
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci --legacy-peer-deps
 
 # Копируем исходный код проекта
 COPY . .

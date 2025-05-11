@@ -20,7 +20,22 @@ export default function AuthPage({ onLogin }) {
     localStorage.setItem("activeAccount", JSON.stringify(googleData.email));
 
     onLogin();
-    navigate("/inbox");
+    navigate("/folder/INBOX");
+  };
+
+  const handleYandexLogin = (yandexData) => {
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "{}");
+    accounts[yandexData.email] = {
+      name: yandexData.name || "",
+      accessToken: yandexData.accessToken,
+      provider: "yandex",
+      picture: yandexData.picture,
+    };
+    localStorage.setItem("accounts", JSON.stringify(accounts));
+    localStorage.setItem("activeAccount", JSON.stringify(yandexData.email));
+
+    onLogin();
+    navigate("/folder/INBOX");
   };
 
   const handleSelectAccount = () => {
@@ -37,6 +52,7 @@ export default function AuthPage({ onLogin }) {
       <LoginForm
         onLogin={onLogin}
         onGoogleLogin={handleGoogleLogin}
+        onYandexLogin={handleYandexLogin}
         onToggleMode={() => setIsLogin(!isLogin)}
         isLogin={isLogin}
         navigate={navigate}

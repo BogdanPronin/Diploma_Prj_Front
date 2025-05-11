@@ -2,8 +2,9 @@
 import { useState } from "react";
 import { login, register } from "../api/emails";
 import GoogleAccessButton from "./GoogleAccessButton";
+import YandexAccessButton from "./YandexAccessButton";
 
-export default function LoginForm({ onLogin, onGoogleLogin, onToggleMode, isLogin, navigate }) {
+export default function LoginForm({ onLogin, onGoogleLogin, onYandexLogin, onToggleMode, isLogin, navigate }) {
   const [formData, setFormData] = useState({ email: "", password: "", confirmPassword: "", name: "" });
   const [error, setError] = useState("");
 
@@ -109,6 +110,7 @@ export default function LoginForm({ onLogin, onGoogleLogin, onToggleMode, isLogi
 
       <div className="mt-4 flex flex-col items-center gap-2">
         <GoogleAccessButton onLogin={onGoogleLogin} />
+        <YandexAccessButton onLogin={onYandexLogin} />
       </div>
 
       <p
