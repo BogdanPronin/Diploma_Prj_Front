@@ -6,7 +6,7 @@ import "./EmailCard.css";
 export default function EmailCard(props) {
   const { image, from, to, date, subject, body, attachments, isSelected, onClick, isRead, category } = props;
 
-  console.log("EmailCard props:", { category, from, to }); // Отладка
+  console.log("EmailCard props:", { category, from, to })
 
   // Форматируем дату перед отображением
   const formattedDate = date ? formatEmailDate(date) : "-";
@@ -61,8 +61,7 @@ export default function EmailCard(props) {
             </span>
           </div>
         </div>
-        <span className="text-sm font-medium mt-2">{subject || "<No Subject>"}</span>
-        <span className="clamp text-xs font-normal mt-4 w-full">{body}</span>
+        <span className="text-sm font-medium mt-2 w-full ">{subject || "<No Subject>"}</span>
       </div>
     </div>
   );

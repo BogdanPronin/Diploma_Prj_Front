@@ -27,7 +27,7 @@ export const fetchEmails = async (category = "INBOX", beforeUid) => {
     const provider = authData.provider;
     const email = authData.email;
 
-    const baseUrl = `http://localhost:8080/api/mail/receive`;
+    const baseUrl = `/api/mail/receive`;
     const queryParams = new URLSearchParams({
       category,
       provider,
@@ -53,7 +53,7 @@ export const fetchEmails = async (category = "INBOX", beforeUid) => {
 };
 
 export const login = async (email, password) => {
-  const url = "http://localhost:8081/api/auth/login";
+  const url = "/api/auth/login";
   const credentials = btoa(`${email}:${password}`);
   const headers = {
     "Authorization": `Basic ${credentials}`,
@@ -78,7 +78,7 @@ export const login = async (email, password) => {
 };
 
 export const register = async (email, password, name) => {
-  const url = "http://localhost:8081/api/auth/register";
+  const url = "/api/auth/register";
 
   const headers = {
     "Content-Type": "application/json",
@@ -161,7 +161,7 @@ export const sendEmail = async (emailData) => {
 
     console.log("📩 Sending email:", Object.fromEntries(formData));
 
-    const response = await fetch("http://localhost:8080/api/mail/send", {
+    const response = await fetch("/api/mail/send", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -187,7 +187,7 @@ export const moveEmailToFolder = async (uid, sourceFolder, toFolder) => {
   try {
     const { accessToken, provider, email } = getAuthData();
 
-    const response = await fetch("http://localhost:8080/api/mail/move-to-folder", {
+    const response = await fetch("/api/mail/move-to-folder", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -224,7 +224,7 @@ export const deleteEmailForever = async (uid, currentFolder) => {
   try {
     const { accessToken, provider, email } = getAuthData();
 
-    const response = await fetch("http://localhost:8080/api/mail/delete-forever", {
+    const response = await fetch("/api/mail/delete-forever", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -260,7 +260,7 @@ export const markEmailsAsRead = async (uids) => {
   }
 
   try {
-    const response = await fetch("http://localhost:8080/api/mail/mark-read-batch", {
+    const response = await fetch("/api/mail/mark-read-batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uids }),
@@ -280,7 +280,7 @@ export const fetchEmailsFromSender = async (senderEmail, limit = 20) => {
   try {
     const { accessToken, provider, email } = getAuthData();
     const response = await fetch(
-      `http://localhost:8080/api/mail/emails-from-sender?sender=${encodeURIComponent(senderEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
+      `/api/mail/emails-from-sender?sender=${encodeURIComponent(senderEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -306,7 +306,7 @@ export const fetchEmailsSentTo = async (recipientEmail, limit = 20) => {
   try {
     const { accessToken, provider, email } = getAuthData();
     const response = await fetch(
-      `http://localhost:8080/api/mail/emails-sent-to?recipient=${encodeURIComponent(recipientEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
+      `/api/mail/emails-sent-to?recipient=${encodeURIComponent(recipientEmail)}&providerName=${provider}&email=${encodeURIComponent(email)}&limit=${limit}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -332,7 +332,7 @@ export const downloadAttachment = async (uid, filename, folder) => {
   try {
     const { accessToken, provider, email } = getAuthData();
 
-    const response = await fetch("http://localhost:8080/api/mail/download-attachment", {
+    const response = await fetch("/api/mail/download-attachment", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -402,7 +402,7 @@ export const saveDraft = async (emailData) => {
 
     console.log("📝 Saving draft:", Object.fromEntries(formData));
 
-    const response = await fetch("http://localhost:8080/api/mail/save-draft", {
+    const response = await fetch("/api/mail/save-draft", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -429,7 +429,7 @@ export const deleteDraft = async (uid, folder = "DRAFTS") => {
   try {
     const { accessToken, provider, email } = getAuthData();
 
-    const response = await fetch("http://localhost:8080/api/mail/delete-forever", {
+    const response = await fetch("/api/mail/delete-forever", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

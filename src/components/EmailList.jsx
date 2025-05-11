@@ -101,7 +101,7 @@ export default function EmailList({
         />
       </div>
       <div
-        className="flex flex-col px-6 pb-5 overflow-y-auto space-y-4"
+        className="flex flex-col lg:px-6 pb-5 overflow-y-auto space-y-4"
         ref={containerRef}
         onScroll={handleScroll}
       >
